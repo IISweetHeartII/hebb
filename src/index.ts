@@ -18,3 +18,18 @@ export { gitSnapshot } from './snapshot';
 export { startWatch } from './watch';
 export { initBrain } from './init';
 export { emitBootstrap, emitIndex, emitRegionRules, emitToTarget, writeAllTiers, printDiag } from './emit';
+
+// Phase 2: REST API + Inbox + Episode
+export { startAPI, getLastActivity, getPendingReports, clearReports } from './api';
+export type { ReportEntry } from './api';
+export { logEpisode, readEpisodes } from './episode';
+export type { Episode } from './episode';
+export { processInbox, ensureInbox, appendCorrection } from './inbox';
+export type { Correction, InboxResult } from './inbox';
+
+// WS1: Claude Code Hooks + Digest
+export { installHooks, uninstallHooks, checkHooks } from './hooks';
+export type { HookStatus } from './hooks';
+export { digestTranscript, extractCorrections, readHookInput } from './digest';
+export type { DigestResult, ExtractedCorrection } from './digest';
+export { resolveBrainRoot } from './constants';

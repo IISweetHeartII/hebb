@@ -68,3 +68,22 @@ export type SignalType = (typeof SIGNAL_TYPES)[number];
 
 export const MARKER_START = '<!-- HEBBIAN:START -->';
 export const MARKER_END = '<!-- HEBBIAN:END -->';
+
+// Hook ownership marker — used to identify hebbian-managed hooks in settings.local.json
+export const HOOK_MARKER = '[hebbian]';
+
+// Digest constants
+export const MAX_CORRECTIONS_PER_SESSION = 10;
+export const MIN_CORRECTION_LENGTH = 15;
+export const DIGEST_LOG_DIR = 'hippocampus/digest_log';
+
+import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+
+/** Resolve brain root path from flag, env var, or defaults */
+export function resolveBrainRoot(brainFlag?: string): string {
+	if (brainFlag) return resolve(brainFlag);
+	if (process.env.HEBBIAN_BRAIN) return resolve(process.env.HEBBIAN_BRAIN);
+	if (existsSync(resolve('./brain'))) return resolve('./brain');
+	return resolve(process.env.HOME || '~', 'hebbian', 'brain');
+}

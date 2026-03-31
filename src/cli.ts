@@ -11,15 +11,17 @@
 //   hebbian signal <type> <neuron-path>     Add dopamine/bomb/memory signal
 //   hebbian decay [--days N]                Mark inactive neurons dormant (default 30 days)
 //   hebbian watch [--brain <path>]          Watch for changes + auto-recompile
+//   hebbian claude install|uninstall|status Manage Claude Code hooks
+//   hebbian digest [--transcript <path>]    Extract corrections from conversation
 //   hebbian diag                            Print brain diagnostics
 //   hebbian stats                           Print brain statistics
 
 import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
 import type { SignalType } from './constants';
+import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.
@@ -40,6 +42,10 @@ COMMANDS:
   dedup                           Batch merge similar neurons (Jaccard >= 0.6)
   snapshot                        Git commit current brain state
   watch                           Watch for changes + auto-recompile
+  api [--port N]                  Start REST API server (default 9090)
+  inbox                           Process corrections inbox
+  claude install|uninstall|status Manage Claude Code hooks
+  digest [--transcript <path>]    Extract corrections from conversation
   diag                            Print brain diagnostics
   stats                           Print brain statistics
 
@@ -50,18 +56,29 @@ OPTIONS:
 
 EXAMPLES:
   hebbian init ./my-brain
-  hebbian grow cortex/frontend/禁console_log --brain ./my-brain
-  hebbian fire cortex/frontend/禁console_log --brain ./my-brain
+  hebbian grow cortex/frontend/NO_console_log --brain ./my-brain
+  hebbian fire cortex/frontend/NO_console_log --brain ./my-brain
   hebbian emit claude --brain ./my-brain
   hebbian emit all
 `.trim();
 
-/** Resolve brain root path from --brain flag, env var, or defaults */
-function resolveBrainRoot(brainFlag: string | undefined): string {
-	if (brainFlag) return resolve(brainFlag);
-	if (process.env.HEBBIAN_BRAIN) return resolve(process.env.HEBBIAN_BRAIN);
-	if (existsSync(resolve('./brain'))) return resolve('./brain');
-	return resolve(process.env.HOME || '~', 'hebbian', 'brain');
+/** Read all data from stdin (non-blocking, returns empty string if no data). */
+function readStdin(): Promise<string> {
+	return new Promise((resolve) => {
+		if (process.stdin.isTTY) {
+			resolve('');
+			return;
+		}
+		const chunks: Buffer[] = [];
+		process.stdin.on('data', (chunk: Buffer) => chunks.push(chunk));
+		process.stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+		process.stdin.on('error', () => resolve(''));
+		// Timeout after 1s to avoid hanging
+		setTimeout(() => {
+			process.stdin.destroy();
+			resolve(Buffer.concat(chunks).toString('utf8'));
+		}, 1000);
+	});
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -71,6 +88,7 @@ async function main(argv: string[]): Promise<void> {
 			brain: { type: 'string', short: 'b' },
 			days: { type: 'string', short: 'd' },
 			port: { type: 'string', short: 'p' },
+			transcript: { type: 'string', short: 't' },
 			help: { type: 'boolean', short: 'h' },
 			version: { type: 'boolean', short: 'v' },
 		},
@@ -173,6 +191,57 @@ async function main(argv: string[]): Promise<void> {
 		case 'watch': {
 			const { startWatch } = await import('./watch');
 			await startWatch(brainRoot);
+			break;
+		}
+		case 'api': {
+			const port = values.port ? parseInt(values.port as string, 10) : 9090;
+			const { startAPI } = await import('./api');
+			startAPI(brainRoot, port);
+			// Keep process alive — server handles shutdown
+			await new Promise(() => {});
+			break;
+		}
+		case 'inbox': {
+			const { processInbox } = await import('./inbox');
+			processInbox(brainRoot);
+			break;
+		}
+		case 'claude': {
+			const sub = positionals[1];
+			const { installHooks, uninstallHooks, checkHooks } = await import('./hooks');
+			switch (sub) {
+				case 'install':
+					installHooks(brainRoot);
+					break;
+				case 'uninstall':
+					uninstallHooks();
+					break;
+				case 'status':
+					checkHooks();
+					break;
+				default:
+					console.error('Usage: hebbian claude <install|uninstall|status>');
+					process.exit(1);
+			}
+			break;
+		}
+		case 'digest': {
+			const transcriptFlag = values.transcript as string | undefined;
+			const { digestTranscript, readHookInput } = await import('./digest');
+			if (transcriptFlag) {
+				digestTranscript(brainRoot, resolve(transcriptFlag));
+			} else {
+				// Read stdin for hook input
+				const stdin = await readStdin();
+				const hookInput = readHookInput(stdin);
+				if (hookInput) {
+					digestTranscript(brainRoot, hookInput.transcriptPath, hookInput.sessionId);
+				} else {
+					console.error('Usage: hebbian digest --transcript <path>');
+					console.error('  Or pipe hook input via stdin (Claude Code Stop hook)');
+					process.exit(1);
+				}
+			}
 			break;
 		}
 		case 'diag':
