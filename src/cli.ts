@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import type { SignalType } from './constants';
 import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.
@@ -210,9 +210,14 @@ async function main(argv: string[]): Promise<void> {
 			const sub = positionals[1];
 			const { installHooks, uninstallHooks, checkHooks } = await import('./hooks');
 			switch (sub) {
-				case 'install':
-					installHooks(brainRoot);
+				case 'install': {
+					// For install: default to ./brain in project root, not home dir fallback
+					const installBrain = values.brain
+						? resolve(values.brain as string)
+						: resolve('./brain');
+					installHooks(installBrain);
 					break;
+				}
 				case 'uninstall':
 					uninstallHooks();
 					break;
