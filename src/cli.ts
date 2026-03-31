@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import type { SignalType } from './constants';
 import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.
