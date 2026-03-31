@@ -46,6 +46,7 @@ COMMANDS:
   inbox                           Process corrections inbox
   claude install|uninstall|status Manage Claude Code hooks
   digest [--transcript <path>]    Extract corrections from conversation
+  evolve [--dry-run]              LLM-powered brain evolution (Gemini)
   diag                            Print brain diagnostics
   stats                           Print brain statistics
 
@@ -60,6 +61,7 @@ EXAMPLES:
   hebbian fire cortex/frontend/NO_console_log --brain ./my-brain
   hebbian emit claude --brain ./my-brain
   hebbian emit all
+  GEMINI_API_KEY=... hebbian evolve --dry-run
 `.trim();
 
 /** Read all data from stdin (non-blocking, returns empty string if no data). */
@@ -89,6 +91,7 @@ async function main(argv: string[]): Promise<void> {
 			days: { type: 'string', short: 'd' },
 			port: { type: 'string', short: 'p' },
 			transcript: { type: 'string', short: 't' },
+			'dry-run': { type: 'boolean' },
 			help: { type: 'boolean', short: 'h' },
 			version: { type: 'boolean', short: 'v' },
 		},
@@ -259,6 +262,12 @@ async function main(argv: string[]): Promise<void> {
 					process.exit(1);
 				}
 			}
+			break;
+		}
+		case 'evolve': {
+			const dryRun = values['dry-run'] === true;
+			const { runEvolve } = await import('./evolve');
+			await runEvolve(brainRoot, dryRun);
 			break;
 		}
 		case 'diag':

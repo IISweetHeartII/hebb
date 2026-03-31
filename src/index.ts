@@ -33,3 +33,7 @@ export type { HookStatus } from './hooks';
 export { digestTranscript, extractCorrections, readHookInput } from './digest';
 export type { DigestResult, ExtractedCorrection } from './digest';
 export { resolveBrainRoot } from './constants';
+
+// Phase 4: Evolve Engine
+export { runEvolve } from './evolve';
+export type { EvolveAction, EvolveResult } from './evolve';

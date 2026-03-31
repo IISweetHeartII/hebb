@@ -83,16 +83,16 @@ LLM-powered brain evolution. Port from NeuronFS evolve.go.
 hebbian evolve [--dry-run] [--brain ./brain]
 ```
 
-- [ ] Collect episodes from hippocampus session log (last 100)
-- [ ] Build markdown summary of current brain state
-- [ ] Build zero-shot prompt with axioms + brain + episodes
-- [ ] Call LLM (Groq/OpenAI) with structured JSON response
-- [ ] Parse actions: grow, fire, signal, prune, decay (max 10 per cycle)
-- [ ] Validate: block brainstem/limbic/sensors, prefer fire over grow, schema check
-- [ ] Execute or dry-run mode
-- [ ] Graceful failure: skip cycle on API error, log to episode
+- [x] Collect episodes from hippocampus session log (last 100)
+- [x] Build markdown summary of current brain state
+- [x] Build zero-shot prompt with axioms + brain + episodes
+- [x] Call LLM (Gemini) with structured JSON response
+- [x] Parse actions: grow, fire, signal, prune, decay (max 10 per cycle)
+- [x] Validate: block brainstem/limbic/sensors, schema check
+- [x] Execute or dry-run mode
+- [x] Graceful failure: skip cycle on API error, log to episode
 
-Environment: `GROQ_API_KEY` or `OPENAI_API_KEY`
+Environment: `GEMINI_API_KEY` (required), `EVOLVE_MODEL` (optional override)
 
 ### 4.2 Candidate Neuron Staging
 

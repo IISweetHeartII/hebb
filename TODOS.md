@@ -1,5 +1,14 @@
 # TODOS
 
+## Multi-provider LLM support for evolve
+
+Currently evolve only supports Gemini API. Add Groq, OpenAI, Anthropic, and Ollama (local).
+Provider detection priority: OLLAMA (localhost, no key) > GROQ > OPENAI > ANTHROPIC > GEMINI.
+
+**Priority:** Medium. Gemini works but limits user choice.
+**Depends on:** Phase 4.1 (evolve engine exists)
+**Source:** Eng review decision (2026-04-01)
+
 ## Digest false positive reduction
 
 Current correction detection fires on loose markers like "instead", "avoid", "않" (Korean)
