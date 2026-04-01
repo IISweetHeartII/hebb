@@ -37,17 +37,28 @@ interface HookGroup {
  * Install hebbian hooks into .claude/settings.local.json.
  * Deep-merges with existing settings. Uses statusMessage marker for ownership.
  */
-export function installHooks(brainRoot: string, projectRoot?: string): void {
+export function installHooks(brainRoot: string, projectRoot?: string, global?: boolean): void {
 	const root = projectRoot || process.cwd();
 	const resolvedBrain = resolve(brainRoot);
+
+	// Global install requires absolute brain path
+	if (global) {
+		const home = process.env.HOME || '~';
+		if (!brainRoot.startsWith('/') && !brainRoot.startsWith(home)) {
+			console.error('❌ --global requires an absolute --brain path (e.g. --brain ~/brain)');
+			process.exit(1);
+		}
+	}
 
 	// Auto-init brain if it doesn't exist
 	if (!existsSync(resolvedBrain) || !hasBrainRegions(resolvedBrain)) {
 		initBrain(resolvedBrain);
 	}
 
-	const settingsDir = join(root, SETTINGS_DIR);
-	const settingsPath = join(settingsDir, SETTINGS_FILE);
+	// Global: ~/.claude/settings.json, Local: .claude/settings.local.json
+	const settingsDir = global ? resolve(process.env.HOME || '~', SETTINGS_DIR) : join(root, SETTINGS_DIR);
+	const settingsFile = global ? 'settings.json' : SETTINGS_FILE;
+	const settingsPath = join(settingsDir, settingsFile);
 
 	// Determine if we need --brain flag
 	const defaultBrain = resolve(root, 'brain');
@@ -78,15 +89,15 @@ export function installHooks(brainRoot: string, projectRoot?: string): void {
 	}
 	const hooks = settings.hooks as Record<string, HookGroup[]>;
 
-	// Define hebbian hooks
+	// Define hebbian hooks (session start/end chained for outcome tracking)
 	const hebbianHooks: Array<{ event: string; matcher?: string; entry: HookEntry }> = [
 		{
 			event: 'SessionStart',
 			matcher: 'startup|resume',
 			entry: {
 				type: 'command',
-				command: `${npxBin} hebbian emit claude${brainFlag}`,
-				timeout: 10,
+				command: `${npxBin} hebbian emit claude${brainFlag} && ${npxBin} hebbian session start${brainFlag}`,
+				timeout: 15,
 				statusMessage: `${HOOK_MARKER} refreshing brain`,
 			},
 		},
@@ -94,7 +105,7 @@ export function installHooks(brainRoot: string, projectRoot?: string): void {
 			event: 'Stop',
 			entry: {
 				type: 'command',
-				command: `${npxBin} hebbian digest${brainFlag}`,
+				command: `${npxBin} hebbian digest${brainFlag}; ${npxBin} hebbian session end${brainFlag}`,
 				timeout: 30,
 				statusMessage: `${HOOK_MARKER} digesting session`,
 			},
@@ -141,9 +152,11 @@ export function installHooks(brainRoot: string, projectRoot?: string): void {
  * Remove hebbian hooks from .claude/settings.local.json.
  * Preserves non-hebbian hooks and other settings.
  */
-export function uninstallHooks(projectRoot?: string): void {
+export function uninstallHooks(projectRoot?: string, global?: boolean): void {
 	const root = projectRoot || process.cwd();
-	const settingsPath = join(root, SETTINGS_DIR, SETTINGS_FILE);
+	const settingsDir = global ? resolve(process.env.HOME || '~', SETTINGS_DIR) : join(root, SETTINGS_DIR);
+	const settingsFile = global ? 'settings.json' : SETTINGS_FILE;
+	const settingsPath = join(settingsDir, settingsFile);
 
 	if (!existsSync(settingsPath)) {
 		console.log('No hooks installed (settings.local.json not found)');
@@ -191,9 +204,11 @@ export function uninstallHooks(projectRoot?: string): void {
 /**
  * Check if hebbian hooks are installed.
  */
-export function checkHooks(projectRoot?: string): HookStatus {
+export function checkHooks(projectRoot?: string, global?: boolean): HookStatus {
 	const root = projectRoot || process.cwd();
-	const settingsPath = join(root, SETTINGS_DIR, SETTINGS_FILE);
+	const settingsDir = global ? resolve(process.env.HOME || '~', SETTINGS_DIR) : join(root, SETTINGS_DIR);
+	const settingsFile = global ? 'settings.json' : SETTINGS_FILE;
+	const settingsPath = join(settingsDir, settingsFile);
 
 	const status: HookStatus = {
 		installed: false,
