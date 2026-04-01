@@ -1,3 +1,36 @@
+<!-- HEBBIAN:START -->
+<!-- Generated: 2026-04-01T01:21:23 -->
+<!-- Axiom: Folder=Neuron | File=Trace | Path=Sentence -->
+<!-- Active: 9/9 neurons | Total activation: 8 -->
+
+## hebbian Active Rules
+
+### 🎭 Persona
+
+### 🔗 Subsumption Cascade
+```
+brainstem ←→ limbic ←→ hippocampus ←→ sensors ←→ cortex ←→ ego ←→ prefrontal
+  (P0)         (P1)       (P2)          (P3)       (P4)     (P5)      (P6)
+```
+Lower P always overrides higher P. bomb = full stop.
+
+### 🛡️ Core Directives TOP 5
+1. **DO execute not debate**
+2. **NO fallback**
+
+### Active Regions
+| Region | Neurons | Activation |
+|--------|---------|------------|
+| 🛡️ brainstem | 2 | 2 |
+| 💓 limbic | 0 | 0 |
+| 📝 hippocampus | 1 | 0 |
+| 👁️ sensors | 0 | 0 |
+| 🧠 cortex | 6 | 6 |
+| 🎭 ego | 0 | 0 |
+| 🎯 prefrontal | 0 | 0 |
+
+<!-- HEBBIAN:END -->
+
 # hebbian
 
 Folder-as-neuron brain for any AI agent. TypeScript, zero runtime dependencies, Node 22+.

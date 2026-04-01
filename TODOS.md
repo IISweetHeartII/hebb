@@ -61,6 +61,46 @@ CLI hooks replace this entirely for Claude Code. Other MCP clients can use the R
 **Priority:** None. Revisit only if MCP becomes the dominant integration pattern.
 **Source:** ROADMAP.md Phase 3, killed during design review (2026-03-31)
 
+## Transcript-based test detection
+
+Parse conversation transcript for test signals ('tests passed', 'FAIL', '✓ N tests')
+to enrich outcome data beyond git-only detection.
+
+**What it would do:** Add heuristic patterns to digest.ts that detect test outcomes
+from the conversation text. Log as `test_pass` or `test_fail` outcome signals.
+
+**Priority:** Medium. Git-only detection covers the strongest signals (revert/acceptance).
+Transcript detection adds test_pass/test_fail but with false positive risk.
+**Depends on:** Phase 5 (outcome tracking infrastructure exists)
+**Source:** Eng review decision (2026-04-01)
+
+## Outcome visualization command
+
+`hebbian outcomes` showing per-neuron outcome history with contra ratio,
+session counts, and trend indicators.
+
+**What it would do:** Dedicated command for inspecting the feedback loop's effect
+on individual neurons. Richer than `hebbian sessions` (which shows session-level data).
+
+**Priority:** Low. `hebbian sessions` and `hebbian diag` cover the debugging need.
+Full visualization is nice-to-have for power users.
+**Depends on:** Phase 5 (outcome episodes exist)
+**Source:** CEO review decision (2026-04-01)
+
+## Contra visibility in emit output
+
+Show contra information in the emitted CLAUDE.md content (not just diag/stats).
+Would let the AI itself see which rules are losing trust.
+
+**What it would do:** Add contra count or intensity breakdown to the neuron entries
+in emitRegionRules() output. The AI sees `(counter:5 contra:2 intensity:3)` instead
+of just `(5)`.
+
+**Priority:** Low. Emit intensity ranking (Phase 5) already deprioritizes contra'd
+neurons. Showing the breakdown is DX/transparency improvement.
+**Depends on:** Phase 5 (contra writes exist)
+**Source:** CEO review Codex finding #6 (2026-04-01)
+
 ## Deferred: Multi-brain composition
 
 Global brain + per-project brain, with composition/override rules.

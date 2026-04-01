@@ -98,10 +98,12 @@ Environment: `GEMINI_API_KEY` (required), `EVOLVE_MODEL` (optional override)
 
 New neurons from evolve/inbox/digest land in `{region}/_candidates/` with probation:
 
-- [ ] Created with counter=1
-- [ ] Graduate at counter >= 3 (move to parent region)
-- [ ] Auto-decay if not fired within 14 days
-- [ ] `_candidates/` already invisible to scan/emit/decay (existing `_` prefix convention)
+- [x] Created with counter=1 in `{region}/_candidates/{name}/`
+- [x] Graduate at counter >= 3 (auto-promoted on growCandidate)
+- [x] Auto-decay if not fired within 14 days (`promoteCandidates`)
+- [x] `_candidates/` invisible to scan/emit/decay (existing `_` prefix convention)
+- [x] `hebbian candidates [promote]` CLI command
+- [x] digest/inbox/evolve all route new neurons through candidates
 
 ### 4.3 `hebbian doctor`
 
@@ -111,22 +113,24 @@ Self-diagnostic command for DX. "Why isn't it working?"
 hebbian doctor [--brain ./brain]
 ```
 
-- [ ] Hook installation status (settings.local.json exists? commands valid?)
-- [ ] npx path resolution check
-- [ ] Brain integrity (regions exist? neurons parseable?)
-- [ ] npm version vs installed version
-- [ ] Node.js version check (>= 22)
-- [ ] Actionable fix suggestions for each issue
+- [x] Hook installation status (SessionStart + Stop hook detection)
+- [x] npx path resolution check
+- [x] Brain integrity (all 7 regions exist)
+- [x] npm version vs installed version
+- [x] Node.js version check (>= 22)
+- [x] Candidate count warning
+- [x] Actionable fix suggestions for each issue
 
 ### 4.4 README + Demo (parallel with 4.1)
 
 The "whoa in 2 minutes" README. Ships alongside evolve.
 
-- [ ] 30-second install to first brain
-- [ ] The demo: correct Claude -> hebbian learns -> next session is different
-- [ ] Architecture diagram (text-based)
-- [ ] Comparison table vs Mem0/MemOS
-- [ ] Starter brain templates (TypeScript strict mode, Python best practices)
+- [x] 2-minute demo scenario (install → correct → candidate → graduate → next session)
+- [x] Architecture diagram (text-based, shows full pipeline)
+- [x] Candidate staging explanation
+- [x] Comparison table vs Mem0/MemOS + .cursorrules
+- [x] Starter brain templates (TypeScript + Python)
+- [x] CLI reference updated (all new commands)
 
 ### 4.5 Version Bump + Promotion
 
@@ -144,18 +148,28 @@ Outcome tracking enriches the evolve engine with real signals.
 
 Enrich episode logging with outcome signals:
 
-- [ ] `test_pass` / `test_fail` — did tests pass after AI changes?
-- [ ] `revert` — did user undo AI's work? (git diff comparison)
-- [ ] `correction` — did user explicitly correct AI?
-- [ ] `acceptance` — did user accept without changes?
-- [ ] Attribution: signals apply to all neurons injected at SessionStart
-- [ ] Protected regions: brainstem/limbic/sensors signals logged but not acted on
+- [ ] `test_pass` / `test_fail` — deferred (transcript heuristic, see TODOS.md)
+- [x] `revert` — git diff + working tree comparison detects reverts
+- [x] `correction` — already handled by digest (Phase 3)
+- [x] `acceptance` — default outcome when changes exist and no revert
+- [x] Attribution: subsumption-filtered neurons, full attribution model
+- [x] Protected regions: brainstem/limbic/sensors skipped for contra writes
+- [x] Session state: keyed by UUID, handles concurrent/resumed sessions
+- [x] Working tree detection: catches uncommitted AI changes (Codex finding)
+- [x] `contraNeuron()` — write path for N.contra files
 
 ### 5.2 Evolve Engine Integration
 
-- [ ] Evolve uses outcome signals (not just fire count) for decision-making
-- [ ] Neurons in high-revert sessions accumulate contra signals
-- [ ] Candidate graduation considers outcome signals
+- [x] Evolve prompt includes `## Outcome Signals` section with per-neuron aggregation
+- [x] Neurons in high-revert sessions accumulate contra signals automatically
+- [ ] Candidate graduation considers outcome signals (deferred: candidates not emitted)
+
+### 5.3 Cherry-Picks (CEO Review)
+
+- [x] Emit ranks neurons by intensity (counter - contra + dopamine), not raw counter
+- [x] `hebbian diag` shows contra + intensity breakdown
+- [x] `hebbian sessions` — session outcome history command
+- [x] `hebbian claude install --global` — machine-wide hooks (IISweetHeartII/hebbian#1)
 
 ---
 
@@ -191,6 +205,5 @@ Features ported from [NeuronFS](https://github.com/rhino-acoustic/NeuronFS) (Go,
 |---------|---------|--------|
 | v0.1.0 | Core CLI | DONE |
 | v0.2.0 | REST API + Inbox | DONE |
-| v0.3.x | Claude Code Integration | DONE (current: v0.3.2) |
-| v0.4.0 | Immune System (evolve + candidates + README) | NEXT |
-| v0.5.0 | Feedback Loop (outcome tracking) | planned |
+| v0.3.x | Claude Code Integration | DONE |
+| v0.5.0 | Immune System + Feedback Loop (Phase 4+5 combined) | DONE (current) |

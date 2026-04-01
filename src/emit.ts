@@ -87,7 +87,7 @@ export function emitBootstrap(result: SubsumptionResult, brain: Brain): string {
 	lines.push('|--------|---------|------------|');
 	for (const region of result.activeRegions) {
 		const active = region.neurons.filter((n) => !n.isDormant);
-		const activation = active.reduce((sum, n) => sum + n.counter, 0);
+		const activation = active.reduce((sum, n) => sum + n.intensity, 0);
 		const icon = REGION_ICONS[region.name as RegionName] || '';
 		lines.push(`| ${icon} ${region.name} | ${active.length} | ${activation} |`);
 	}
@@ -117,11 +117,11 @@ export function emitIndex(result: SubsumptionResult, brain: Brain): string {
 		return lines.join('\n');
 	}
 
-	// Top 10 neurons by counter
+	// Top 10 neurons by intensity (counter - contra + dopamine)
 	const allNeurons = result.activeRegions.flatMap((r) =>
 		r.neurons.filter((n) => !n.isDormant && n.counter >= EMIT_THRESHOLD),
 	);
-	allNeurons.sort((a, b) => b.counter - a.counter);
+	allNeurons.sort((a, b) => b.intensity - a.intensity);
 
 	lines.push('## Top 10 Active Neurons');
 	lines.push('| # | Path | Counter | Strength |');
@@ -152,7 +152,7 @@ export function emitIndex(result: SubsumptionResult, brain: Brain): string {
 	for (const region of result.activeRegions) {
 		const active = region.neurons.filter((n) => !n.isDormant);
 		const dormant = region.neurons.filter((n) => n.isDormant);
-		const activation = active.reduce((sum, n) => sum + n.counter, 0);
+		const activation = active.reduce((sum, n) => sum + n.intensity, 0);
 		const icon = REGION_ICONS[region.name as RegionName] || '';
 		lines.push(`| ${icon} ${region.name} | ${active.length} | ${dormant.length} | ${activation} | [_rules.md](${region.name}/_rules.md) |`);
 	}
@@ -173,7 +173,7 @@ export function emitRegionRules(region: Region): string {
 	const ko = REGION_KO[region.name as RegionName] || '';
 	const active = region.neurons.filter((n) => !n.isDormant);
 	const dormant = region.neurons.filter((n) => n.isDormant);
-	const activation = active.reduce((sum, n) => sum + n.counter, 0);
+	const activation = active.reduce((sum, n) => sum + n.intensity, 0);
 
 	const lines: string[] = [];
 	lines.push(`# ${icon} ${region.name} (${ko})`);
@@ -192,7 +192,7 @@ export function emitRegionRules(region: Region): string {
 	// Neuron tree
 	if (active.length > 0) {
 		lines.push('## Rules');
-		const sorted = [...active].sort((a, b) => b.counter - a.counter);
+		const sorted = [...active].sort((a, b) => b.intensity - a.intensity);
 		for (const n of sorted) {
 			const indent = '  '.repeat(Math.min(n.depth, 4));
 			const prefix = strengthPrefix(n.counter);
@@ -315,7 +315,7 @@ export function printDiag(brain: Brain, result: SubsumptionResult): void {
 		const icon = REGION_ICONS[region.name as RegionName] || '';
 		const active = region.neurons.filter((n) => !n.isDormant);
 		const dormant = region.neurons.filter((n) => n.isDormant);
-		const activation = active.reduce((sum, n) => sum + n.counter, 0);
+		const activation = active.reduce((sum, n) => sum + n.intensity, 0);
 		const isBlocked = result.blockedRegions.some((r) => r.name === region.name);
 		const status = region.hasBomb ? '\u{1F4A3} BOMB' : isBlocked ? '\u{1F6AB} BLOCKED' : '\u2705 ACTIVE';
 
@@ -328,7 +328,8 @@ export function printDiag(brain: Brain, result: SubsumptionResult): void {
 
 		const top3 = sortedActive(region.neurons, 3);
 		for (const n of top3) {
-			console.log(`      \u251C ${n.path} (${n.counter})`);
+			const contraStr = n.contra > 0 ? ` contra:${n.contra}` : '';
+			console.log(`      \u251C ${n.path} (counter:${n.counter}${contraStr} intensity:${n.intensity})`);
 		}
 	}
 	console.log('');
@@ -343,11 +344,11 @@ function pathToSentence(path: string): string {
 	return path.replace(/\//g, ' > ').replace(/_/g, ' ');
 }
 
-/** Sort non-dormant neurons by counter (descending), take first N. */
+/** Sort non-dormant neurons by intensity (descending), take first N. */
 function sortedActive(neurons: Neuron[], n: number): Neuron[] {
 	return [...neurons]
 		.filter((neuron) => !neuron.isDormant)
-		.sort((a, b) => b.counter - a.counter)
+		.sort((a, b) => b.intensity - a.intensity)
 		.slice(0, n);
 }
 
