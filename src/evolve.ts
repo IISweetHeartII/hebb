@@ -16,10 +16,11 @@ import { scanBrain } from './scanner';
 import type { Brain } from './types';
 import { REGIONS, REGION_PRIORITY } from './constants';
 import { fireNeuron } from './fire';
-import { growNeuron } from './grow';
+import { growCandidate } from './candidates';
 import { signalNeuron } from './signal';
 import { rollbackNeuron } from './rollback';
 import { runDecay } from './decay';
+import { buildOutcomeSummary } from './outcome';
 import type { SignalType } from './constants';
 
 // --- Types ---
@@ -57,7 +58,8 @@ export async function runEvolve(brainRoot: string, dryRun: boolean): Promise<Evo
 	const episodes = readEpisodes(brainRoot);
 	const brain = scanBrain(brainRoot);
 	const summary = buildBrainSummary(brain);
-	const prompt = buildPrompt(summary, episodes);
+	const outcomeSummary = buildOutcomeSummary(brainRoot);
+	const prompt = buildPrompt(summary, episodes, outcomeSummary);
 
 	// 2. Call LLM
 	let rawActions: EvolveAction[];
@@ -124,10 +126,12 @@ export function buildBrainSummary(brain: Brain): string {
 
 // --- Prompt Construction ---
 
-export function buildPrompt(summary: string, episodes: Episode[]): string {
+export function buildPrompt(summary: string, episodes: Episode[], outcomeSummary?: string): string {
 	const episodeLines = episodes.length > 0
 		? episodes.map((e) => `- [${e.ts}] ${e.type}: ${e.path} — ${e.detail}`).join('\n')
 		: '(no recent episodes)';
+
+	const outcomeSection = outcomeSummary || '';
 
 	return `You are the evolve engine for a hebbian brain — a filesystem-based memory system for AI agents.
 
@@ -140,6 +144,7 @@ export function buildPrompt(summary: string, episodes: Episode[]): string {
 ## Current Brain
 ${summary}
 
+${outcomeSection}
 ## Recent Episodes (last ${episodes.length})
 ${episodeLines}
 
@@ -294,7 +299,7 @@ export function executeActions(brainRoot: string, actions: EvolveAction[]): numb
 					fireNeuron(brainRoot, action.path);
 					break;
 				case 'grow':
-					growNeuron(brainRoot, action.path);
+					growCandidate(brainRoot, action.path);
 					break;
 				case 'signal':
 					signalNeuron(brainRoot, action.path, (action.signal || 'dopamine') as SignalType);
