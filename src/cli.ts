@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import type { SignalType } from './constants';
 import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.3.2';
+const VERSION = '0.5.0';
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.
@@ -46,7 +46,11 @@ COMMANDS:
   inbox                           Process corrections inbox
   claude install|uninstall|status Manage Claude Code hooks
   digest [--transcript <path>]    Extract corrections from conversation
+  candidates [promote]            List candidates or promote graduated ones
   evolve [--dry-run]              LLM-powered brain evolution (Gemini)
+  session start|end               Capture/detect session outcomes
+  sessions                        Show session outcome history
+  doctor                          Self-diagnostic (hooks, brain, versions)
   diag                            Print brain diagnostics
   stats                           Print brain statistics
 
@@ -92,6 +96,7 @@ async function main(argv: string[]): Promise<void> {
 			port: { type: 'string', short: 'p' },
 			transcript: { type: 'string', short: 't' },
 			'dry-run': { type: 'boolean' },
+			global: { type: 'boolean', short: 'g' },
 			help: { type: 'boolean', short: 'h' },
 			version: { type: 'boolean', short: 'v' },
 		},
@@ -217,21 +222,29 @@ async function main(argv: string[]): Promise<void> {
 		}
 		case 'claude': {
 			const sub = positionals[1];
+			const isGlobal = values.global === true;
 			const { installHooks, uninstallHooks, checkHooks } = await import('./hooks');
 			switch (sub) {
 				case 'install': {
-					// For install: default to ./brain in project root, not home dir fallback
+					// Global: require --brain flag or HEBBIAN_BRAIN env
+					// Local: default to ./brain in project root
 					const installBrain = values.brain
 						? resolve(values.brain as string)
-						: resolve('./brain');
-					installHooks(installBrain);
+						: isGlobal
+							? (process.env.HEBBIAN_BRAIN ? resolve(process.env.HEBBIAN_BRAIN) : '')
+							: resolve('./brain');
+					if (isGlobal && !installBrain) {
+						console.error('❌ --global requires --brain <path> or HEBBIAN_BRAIN env var');
+						process.exit(1);
+					}
+					installHooks(installBrain, undefined, isGlobal);
 					break;
 				}
 				case 'uninstall':
-					uninstallHooks();
+					uninstallHooks(undefined, isGlobal);
 					break;
 				case 'status': {
-					checkHooks();
+					checkHooks(undefined, isGlobal);
 					console.log(`   version: v${VERSION}`);
 					const { checkForUpdates: checkUpdates, formatUpdateBanner: formatBanner } = await import('./update-check');
 					const updateStatus = await checkUpdates(VERSION);
@@ -240,7 +253,7 @@ async function main(argv: string[]): Promise<void> {
 					break;
 				}
 				default:
-					console.error('Usage: hebbian claude <install|uninstall|status>');
+					console.error('Usage: hebbian claude <install|uninstall|status> [--global]');
 					process.exit(1);
 			}
 			break;
@@ -264,10 +277,67 @@ async function main(argv: string[]): Promise<void> {
 			}
 			break;
 		}
+		case 'candidates': {
+			const subCmd = positionals[1];
+			const { listCandidates, promoteCandidates } = await import('./candidates');
+			if (subCmd === 'promote') {
+				const result = promoteCandidates(brainRoot);
+				console.log(`🎓 promoted: ${result.promoted.length}, decayed: ${result.decayed.length}`);
+			} else {
+				const candidates = listCandidates(brainRoot);
+				if (candidates.length === 0) {
+					console.log('No pending candidates');
+				} else {
+					console.log(`Candidates (promote at counter=${3}):`);
+					for (const c of candidates) {
+						const bar = '█'.repeat(c.counter) + '░'.repeat(Math.max(0, 3 - c.counter));
+						console.log(`  ${bar} ${c.counter}/3  ${c.targetPath}  (${c.daysInactive}d idle)`);
+					}
+				}
+			}
+			break;
+		}
 		case 'evolve': {
 			const dryRun = values['dry-run'] === true;
 			const { runEvolve } = await import('./evolve');
 			await runEvolve(brainRoot, dryRun);
+			break;
+		}
+		case 'session': {
+			const sub = positionals[1];
+			const { captureSessionStart, detectOutcome } = await import('./outcome');
+			switch (sub) {
+				case 'start':
+					captureSessionStart(brainRoot);
+					break;
+				case 'end':
+					detectOutcome(brainRoot);
+					break;
+				default:
+					console.error('Usage: hebbian session <start|end>');
+					process.exit(1);
+			}
+			break;
+		}
+		case 'sessions': {
+			const { readEpisodes } = await import('./episode');
+			const episodes = readEpisodes(brainRoot).filter((e) => e.outcome);
+			if (episodes.length === 0) {
+				console.log('No session outcomes recorded yet');
+			} else {
+				console.log('Session Outcomes:');
+				for (const ep of episodes.reverse()) {
+					const icon = ep.outcome === 'revert' ? '🔄' : '✅';
+					const neurons = ep.neurons ? `${ep.neurons.length} neurons` : '';
+					console.log(`  ${icon} ${ep.ts.slice(0, 19)} ${ep.outcome} ${neurons}`);
+				}
+				console.log(`\nTotal: ${episodes.length} sessions`);
+			}
+			break;
+		}
+		case 'doctor': {
+			const { runDoctor } = await import('./doctor');
+			await runDoctor(brainRoot);
 			break;
 		}
 		case 'diag':
