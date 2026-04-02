@@ -21,7 +21,15 @@ import { resolve } from 'node:path';
 import type { SignalType } from './constants';
 import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.8.0';
+// Read version from package.json — try both source and dist-relative paths
+import { createRequire } from 'node:module';
+const _require = createRequire(import.meta.url);
+const VERSION: string = (() => {
+	for (const rel of ['../package.json', '../../package.json']) {
+		try { return _require(rel).version; } catch { /* next */ }
+	}
+	return '0.0.0';
+})();
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.

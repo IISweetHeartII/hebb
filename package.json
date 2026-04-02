@@ -1,6 +1,6 @@
 {
   "name": "hebbian",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Folder-as-neuron brain for any AI agent. mkdir replaces system prompts.",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2 (2026-04-02)
+
+CLI version now reads from package.json instead of hardcoded string.
+
 ## 0.8.1 (2026-04-02)
 
 Fix digest dedup + soft failure detection for masked errors.
