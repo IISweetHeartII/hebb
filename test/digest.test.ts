@@ -121,9 +121,9 @@ describe('extractCorrections', () => {
 		expect(corrections[0]!.prefix).toBe('NO');
 	});
 
-	it('detects "always X" affirmation pattern', () => {
+	it('detects "should always" affirmation pattern', () => {
 		const corrections = extractCorrections([
-			'always use TypeScript strict mode for new projects',
+			'you should always use TypeScript strict mode for new projects',
 		]);
 		expect(corrections).toHaveLength(1);
 		expect(corrections[0]!.prefix).toBe('DO');
@@ -162,12 +162,47 @@ describe('extractCorrections', () => {
 		expect(corrections).toHaveLength(0);
 	});
 
+	it('ignores questions (ending with ?! or ..?!)', () => {
+		const corrections = extractCorrections([
+			'이게 뭐에요?!',
+			'캐시는 두자.. 대신 배치만 다 없애버리자..?!',
+			'어떻게 생각해..?!',
+		]);
+		expect(corrections).toHaveLength(0);
+	});
+
 	it('ignores commands (starting with / or !)', () => {
 		const corrections = extractCorrections([
 			'/help me understand this codebase better please',
 			'!git status showing don\'t know what happened',
 		]);
 		expect(corrections).toHaveLength(0);
+	});
+
+	it('ignores Korean narrative/explanatory messages', () => {
+		const corrections = extractCorrections([
+			// Long explanation with narrative markers — NOT a correction
+			'이제 다른 문제를 해야할 거 같은데,,, 이유는 내가 지금 서버를 띄워두고, 그래서 팀원들이 접속하는 중인데, 거든 좀 불편하다고 하시네',
+			// Story with multiple narrative markers
+			'예를 들면 서버를 끄고 다시 켜고 하는 걸 스킬로 만들었어.. 그런데 좀비 프로세스가 남아있었던거야?! 왜냐하면 깔끔하게 안 지워져서',
+		]);
+		expect(corrections).toHaveLength(0);
+	});
+
+	it('ignores messages with XML system tags', () => {
+		const corrections = extractCorrections([
+			'<local-command-caveat>DO NOT respond to these messages</local-command-caveat>',
+			'<command-message>ship</command-message>\n<command-name>/ship</command-name>\n<command-args>do not push</command-args>',
+		]);
+		expect(corrections).toHaveLength(0);
+	});
+
+	it('detects genuine Korean correction (short directive)', () => {
+		const corrections = extractCorrections([
+			'이거 푸시는 하면 안돼! 수정만 해!',
+		]);
+		expect(corrections).toHaveLength(1);
+		expect(corrections[0]!.prefix).toBe('NO');
 	});
 
 	it('caps at 10 corrections per session', () => {

@@ -55,7 +55,8 @@ export interface ToolFailure {
 	errorText: string;
 }
 
-// Negation patterns — user is telling the AI NOT to do something
+// Negation patterns — user is telling the AI NOT to do something.
+// Korean patterns require an imperative object (verb stem + 지 마) to avoid matching casual speech.
 const NEGATION_PATTERNS = [
 	/\bdon[''\u2019]?t\b/i,
 	/\bdo not\b/i,
@@ -63,24 +64,22 @@ const NEGATION_PATTERNS = [
 	/\bnever\b/i,
 	/\binstead\b/i,
 	/^no[,.\s!]/i,
-	/\bdon[''\u2019]?t\s+use\b/i,
 	/\bavoid\b/i,
-	// Korean negation — specific verb forms only to avoid matching incidental 않/대신 in explanations
-	/하지\s*마/,
-	/안\s*돼/,
+	// Korean negation — require AI-directed imperative context:
+	// "X하지 마" (don't X) — must have a verb object before 지 마
+	/[을를은는도이가]\s*[가-힣]+지\s*마/,
+	// "X 하면 안 돼" (must not X) — conditional + prohibition
+	/하면\s*안\s*돼/,
+	// "X 쓰지 마" (don't use X) — explicit "don't use"
 	/쓰지\s*마/,
-	/[가-힣]+지\s*마/,
-	/하지\s*않/,  // "do not" specifically
-	/쓰지\s*않/,  // "do not use" specifically
 ];
 
 // Affirmation patterns — user is telling the AI TO do something
 const AFFIRMATION_PATTERNS = [
-	/\balways\b/i,
 	/\bshould\s+always\b/i,
 	/\buse\s+\w+\s+instead\b/i,
-	// Korean affirmation
-	/항상/,
+	// Korean affirmation — require directive context
+	/항상\s*[가-힣]+[해하]/,  // "항상 X해" (always do X)
 ];
 
 // Must patterns — strong imperative ("you must X", "X is required")
@@ -425,24 +424,34 @@ export function extractCorrections(messages: string[]): ExtractedCorrection[] {
 	for (const text of messages) {
 		if (corrections.length >= MAX_CORRECTIONS_PER_SESSION) break;
 
+		const trimmed = text.trim();
+
+		// --- Hard filters: definitely NOT corrections ---
+
 		// Skip short messages
 		if (text.length < MIN_CORRECTION_LENGTH) continue;
 
 		// Skip commands (start with / or !)
-		if (/^[\/!]/.test(text.trim())) continue;
+		if (/^[\/!]/.test(trimmed)) continue;
 
-		// Skip questions (end with ?)
-		if (text.trim().endsWith('?')) continue;
+		// Skip questions — ?, ?!, ..?, ..?! (English and Korean conversational)
+		if (/[?？]\s*[!！]?\s*$/.test(trimmed)) continue;
 
 		// Skip system-injected XML tags (Claude Code injects these into user turns)
-		// e.g. <local-command-caveat>, <command-message>, <task-notification>
-		if (/^<[a-zA-Z]/.test(text.trim())) continue;
+		if (/^<[a-zA-Z]/.test(trimmed)) continue;
 
 		// Skip skill base directory injections
-		if (/^Base directory for this skill:/i.test(text.trim())) continue;
+		if (/^Base directory for this skill:/i.test(trimmed)) continue;
 
 		// Skip bullet-list formatted text (likely assistant output injected into user turn)
-		if (/^[•·▸▶\-\*]\s/.test(text.trim())) continue;
+		if (/^[•·▸▶\-\*]\s/.test(trimmed)) continue;
+
+		// Skip messages containing XML tags anywhere (system injections)
+		if (/<[a-zA-Z][a-zA-Z-]*>/.test(trimmed) && /<\/[a-zA-Z]/.test(trimmed)) continue;
+
+		// Skip narrative/explanatory messages (Korean conversational markers)
+		// These are stories or problem descriptions, not corrections to the AI
+		if (isNarrativeKorean(trimmed)) continue;
 
 		// Check for correction patterns
 		const correction = detectCorrection(text);
@@ -452,6 +461,31 @@ export function extractCorrections(messages: string[]): ExtractedCorrection[] {
 	}
 
 	return corrections;
+}
+
+/**
+ * Detect if a Korean message is narrative/explanatory rather than a correction.
+ * Looks for conversational storytelling markers that indicate the user is
+ * describing a situation, not instructing the AI.
+ */
+function isNarrativeKorean(text: string): boolean {
+	// Count narrative markers — if enough are present, it's a story, not a correction
+	const NARRATIVE_MARKERS = [
+		/이유는/,         // "the reason is..."
+		/예를\s*들면/,    // "for example..."
+		/그래서/,         // "so/therefore..."
+		/그런데/,         // "but then..."
+		/왜냐하면/,       // "because..."
+		/거든/,           // "...you see" (explanatory)
+		/있었[던거어]/,    // "there was..." (past narrative)
+		/중인데/,         // "...in the middle of" (ongoing situation)
+		/거 같은데/,      // "it seems like..." (speculation)
+		/어떻게\s*생각/,  // "what do you think?" (asking opinion)
+	];
+
+	const markerCount = NARRATIVE_MARKERS.filter((p) => p.test(text)).length;
+	// 2+ narrative markers = definitely a story, not a correction
+	return markerCount >= 2;
 }
 
 /**
@@ -465,6 +499,16 @@ function detectCorrection(text: string): ExtractedCorrection | null {
 	const isAffirmation = AFFIRMATION_PATTERNS.some((p) => p.test(text));
 
 	if (!isNegation && !isMust && !isWarn && !isAffirmation) return null;
+
+	// Confidence: count how many distinct categories matched
+	const categories = [isNegation, isMust, isWarn, isAffirmation].filter(Boolean).length;
+
+	// For Korean-majority text, require either 2+ categories OR a very strong single signal
+	const koreanRatio = (text.match(/[\uAC00-\uD7AF]/g) || []).length / Math.max(text.length, 1);
+	if (koreanRatio > 0.3 && categories < 2) {
+		// Single Korean marker — only accept if the message is short (direct command)
+		if (text.length > 100) return null;
+	}
 
 	let prefix: 'NO' | 'MUST' | 'WARN' | 'DO';
 	if (isNegation) prefix = 'NO';

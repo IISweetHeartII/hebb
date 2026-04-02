@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0 (2026-04-02)
+
+Digest quality overhaul — Korean false positive reduction.
+
+### Changed
+- **Korean negation patterns** tightened: require imperative verb object (`X하면 안 돼`) instead of matching casual speech (`하지 않`)
+- **Affirmation patterns** tightened: `always` alone no longer matches, requires `should always` or `항상 X해`
+- **Multi-signal requirement**: Korean-heavy text (>30% hangul) with only 1 pattern category AND >100 chars is rejected — prevents long narrative messages from being classified as corrections
+- **Narrative filter** (`isNarrativeKorean`): messages with 2+ storytelling markers (이유는, 예를 들면, 그래서, 왜냐하면, etc.) are skipped
+- **Question filter** expanded: now catches `?!`, `..?!`, `..?` endings (Korean conversational)
+- **XML system tag filter** expanded: catches `<tag>...</tag>` anywhere in message, not just at start
+
+### Added
+- 4 new tests (336 total): Korean narrative rejection, XML tag filtering, Korean question formats, genuine Korean correction detection
+
 ## 0.8.2 (2026-04-02)
 
 CLI version now reads from package.json instead of hardcoded string.
