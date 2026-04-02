@@ -92,7 +92,7 @@ hebbian evolve [--dry-run] [--brain ./brain]
 - [x] Execute or dry-run mode
 - [x] Graceful failure: skip cycle on API error, log to episode
 
-Environment: `GEMINI_API_KEY` (required), `EVOLVE_MODEL` (optional override)
+Environment: `GEMINI_API_KEY` (optional — self-learning works without it via agent-as-evaluator), `EVOLVE_MODEL` (optional override)
 
 ### 4.2 Candidate Neuron Staging
 
