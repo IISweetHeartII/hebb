@@ -14,9 +14,10 @@
 
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
-import { REGIONS } from './constants';
+import { REGIONS, PROPAGATION_EPISODE_TYPES } from './constants';
 import { growNeuron } from './grow';
 import { fireNeuron } from './fire';
+import { readEpisodes } from './episode';
 import type { GrowResult } from './grow';
 
 export const CANDIDATE_THRESHOLD = 3;
@@ -57,6 +58,7 @@ export function growCandidate(brainRoot: string, neuronPath: string): GrowResult
 
 	if (result.counter >= CANDIDATE_THRESHOLD) {
 		const ok = moveCandidate(brainRoot, candidatePath, neuronPath);
+		if (ok) propagateToShared(brainRoot, neuronPath);
 		return { ...result, path: ok ? neuronPath : result.path, promoted: ok };
 	}
 
@@ -107,6 +109,7 @@ export function promoteCandidates(brainRoot: string): PromoteResult {
 
 			if (counter >= CANDIDATE_THRESHOLD) {
 				moveCandidate(brainRoot, candidatePath, targetPath);
+				propagateToShared(brainRoot, targetPath);
 				promoted.push(targetPath);
 			} else if (now - mtime > decayMs) {
 				rmSync(neuronDir, { recursive: true, force: true });
@@ -168,5 +171,41 @@ function readCounter(dir: string): number {
 		return Math.max(...files.map((f) => parseInt(f, 10)));
 	} catch {
 		return 0;
+	}
+}
+
+/**
+ * Propagate a promoted neuron to the shared brain (cross-agent learning).
+ * Only propagates if:
+ *   1. Brain is in multi-brain mode (path contains /agents/)
+ *   2. Recent episodes for this neuron include tool-failure or retry-pattern
+ * Best-effort: never throws.
+ */
+export function propagateToShared(brainRoot: string, targetPath: string): boolean {
+	try {
+		// Detect multi-brain root: brain/agents/cto → brain/
+		const agentsIdx = brainRoot.indexOf('/agents/');
+		if (agentsIdx === -1) return false; // not in multi-brain mode
+
+		const multiBrainRoot = brainRoot.slice(0, agentsIdx);
+		const sharedRoot = join(multiBrainRoot, 'shared');
+		if (!existsSync(sharedRoot)) return false;
+
+		// Check if this neuron's episodes include propagation-worthy types
+		const episodes = readEpisodes(brainRoot);
+		const neuronName = targetPath.split('/').pop() || '';
+		const hasRelevantEpisode = episodes.some(
+			(ep) => (PROPAGATION_EPISODE_TYPES as readonly string[]).includes(ep.type)
+				&& (ep.path.includes(neuronName) || ep.detail.includes(neuronName)),
+		);
+
+		if (!hasRelevantEpisode) return false;
+
+		// Propagate to shared brain
+		growNeuron(sharedRoot, targetPath);
+		console.log(`   📡 propagated to shared: ${targetPath}`);
+		return true;
+	} catch {
+		return false; // best-effort
 	}
 }

@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import type { SignalType } from './constants';
 import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.7.1';
+const VERSION = '0.8.0';
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.
@@ -348,6 +348,44 @@ async function main(argv: string[]): Promise<void> {
 		case 'doctor': {
 			const { runDoctor } = await import('./doctor');
 			await runDoctor(brainRoot);
+			break;
+		}
+		case 'cron': {
+			const sub = positionals[1];
+			const { installCron, uninstallCron, checkCron } = await import('./cron');
+			switch (sub) {
+				case 'install':
+					installCron(brainRoot, 'prune');
+					break;
+				case 'uninstall':
+					uninstallCron('prune');
+					break;
+				case 'status': {
+					const status = checkCron('prune');
+					console.log(`Pruning cron: ${status.installed ? '✅ installed' : '❌ not installed'}`);
+					if (status.installed) console.log(`   ${status.path}`);
+					const fbStatus = checkCron('feedback');
+					console.log(`Feedback cron: ${fbStatus.installed ? '✅ installed' : '❌ not installed'}`);
+					if (fbStatus.installed) console.log(`   ${fbStatus.path}`);
+					break;
+				}
+				default:
+					console.error('Usage: hebbian cron <install|uninstall|status>');
+					process.exit(1);
+			}
+			break;
+		}
+		case 'feedback': {
+			const sub = positionals[1];
+			const { runFeedback } = await import('./feedback');
+			switch (sub) {
+				case 'scan':
+					runFeedback(brainRoot);
+					break;
+				default:
+					console.error('Usage: hebbian feedback <scan>');
+					process.exit(1);
+			}
 			break;
 		}
 		case 'diag':

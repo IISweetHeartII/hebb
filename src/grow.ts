@@ -9,7 +9,7 @@
 
 import { mkdirSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { REGIONS, JACCARD_THRESHOLD } from './constants';
+import { REGIONS, JACCARD_THRESHOLD, SKILLS_DIR } from './constants';
 import { tokenize, jaccardSimilarity } from './similarity';
 import { fireNeuron } from './fire';
 
@@ -38,8 +38,8 @@ export function growNeuron(brainRoot: string, neuronPath: string): GrowResult {
 	}
 	const parts = neuronPath.split('/');
 	const regionName = parts[0]!;
-	if (!(REGIONS as readonly string[]).includes(regionName)) {
-		throw new Error(`Invalid region: ${regionName}. Valid: ${REGIONS.join(', ')}`);
+	if (regionName !== SKILLS_DIR && !(REGIONS as readonly string[]).includes(regionName)) {
+		throw new Error(`Invalid region: ${regionName}. Valid: ${REGIONS.join(', ')}, ${SKILLS_DIR}`);
 	}
 
 	const leafName = parts[parts.length - 1]!;

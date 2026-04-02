@@ -8,7 +8,7 @@
 
 import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { REGIONS, REGION_PRIORITY, MAX_DEPTH } from './constants';
+import { REGIONS, REGION_PRIORITY, MAX_DEPTH, SKILLS_DIR } from './constants';
 import type { Neuron, Region, Brain } from './types';
 
 /**
@@ -167,6 +167,16 @@ function walkRegion(dir: string, regionRoot: string, depth: number): Neuron[] {
 	}
 
 	return neurons;
+}
+
+/**
+ * Scan skills directory — returns flat array of skill neurons.
+ * Skills are NOT part of the subsumption cascade.
+ */
+export function scanSkills(brainRoot: string): Neuron[] {
+	const skillsPath = join(brainRoot, SKILLS_DIR);
+	if (!existsSync(skillsPath)) return [];
+	return walkRegion(skillsPath, skillsPath, 0);
 }
 
 /**

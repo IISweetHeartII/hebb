@@ -28,6 +28,7 @@ export interface Region {
 export interface Brain {
   root: string;
   regions: Region[];
+  skills?: Neuron[];
 }
 
 export interface SubsumptionResult {

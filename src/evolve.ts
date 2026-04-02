@@ -16,9 +16,10 @@ import { readEpisodes, logEpisode } from './episode';
 import type { Episode } from './episode';
 import { scanBrain } from './scanner';
 import type { Brain } from './types';
-import { REGIONS, REGION_PRIORITY } from './constants';
+import { REGIONS, REGION_PRIORITY, SKILLS_DIR } from './constants';
 import { fireNeuron } from './fire';
 import { growCandidate } from './candidates';
+import { growNeuron } from './grow';
 import { signalNeuron } from './signal';
 import { rollbackNeuron } from './rollback';
 import { runDecay } from './decay';
@@ -355,6 +356,8 @@ export function validateActions(actions: EvolveAction[], _brain: Brain): EvolveA
 				return false;
 			}
 			const region = action.path.split('/')[0];
+			// Skills directory is valid but not a region
+			if (region === SKILLS_DIR) return true;
 			if (!region || PROTECTED_REGIONS.includes(region)) {
 				console.log(`   🛡️ blocked: ${action.type} ${action.path} (protected region)`);
 				return false;
@@ -384,7 +387,12 @@ export function executeActions(brainRoot: string, actions: EvolveAction[]): numb
 					fireNeuron(brainRoot, action.path);
 					break;
 				case 'grow':
-					growCandidate(brainRoot, action.path);
+					// Skills skip candidate staging — directly created by evolve
+					if (action.path.startsWith(SKILLS_DIR + '/')) {
+						growNeuron(brainRoot, action.path);
+					} else {
+						growCandidate(brainRoot, action.path);
+					}
 					break;
 				case 'signal':
 					signalNeuron(brainRoot, action.path, (action.signal || 'dopamine') as SignalType);

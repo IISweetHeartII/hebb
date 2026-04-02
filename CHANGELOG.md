@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.8.0 (2026-04-02)
+
+Voyager foundations — skill library, cross-agent learning, autonomous feedback loop.
+
+### Added
+- **Skill Library** (`brain/skills/`) — Voyager-pattern executable skill storage outside the subsumption cascade. Skills skip candidate staging when proposed by evolve. `hebbian grow skills/pattern_name` directly creates skills.
+- **Cross-agent learning propagation** — when a candidate neuron is promoted AND its episodes include `tool-failure` or `retry-pattern` types, it auto-propagates to `brain/shared/` so other agents learn from the failure.
+- **Feedback daemon** (`hebbian feedback scan`) — scans shared brain for new neurons, propagates `WARN_shared_*` neurons to all agent brains. Watermark-based dedup prevents feedback loops. Run via cron every 15 minutes.
+- **Cron management** (`hebbian cron install|uninstall|status`) — generates and installs macOS launchd plists for nightly pruning (02:00) and feedback scanning (every 15 min).
+- `scanSkills()`, `propagateToShared()`, `runFeedback()`, `scanSharedBrain()`, `propagateToAgents()` exported from public API
+- `Brain.skills?` optional field in Brain type
+
+### Changed
+- `growNeuron()` now accepts `skills/` as a valid path prefix
+- `validateActions()` in evolve accepts `skills/` paths (skills skip candidate staging)
+- `initBrain()` creates `skills/` directory with `_rules.md` template
+
+## 0.7.1 (2026-04-02)
+
+Test and documentation update for v0.6-0.7 features.
+
+### Added
+- 16 new tests (317 total): parseToolResults, detectToolFailure, detectRetryPatterns, resolveAgentBrain, resolveSharedBrain, path traversal blocking
+
+### Changed
+- README updated with tool failure detection, multi-brain, evolve prune documentation
+
 ## 0.7.0 (2026-04-02)
 
 Voyager foundations — retry detection, pruning mode, multi-brain, auto-gitignore.

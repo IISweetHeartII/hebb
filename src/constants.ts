@@ -106,3 +106,5 @@ export function resolveSharedBrain(brainRoot: string): string {
 
 export const AGENTS_DIR = 'agents';
 export const SHARED_DIR = 'shared';
+export const SKILLS_DIR = 'skills';
+export const PROPAGATION_EPISODE_TYPES = ['tool-failure', 'retry-pattern'] as const;

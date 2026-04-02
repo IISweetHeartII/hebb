@@ -84,6 +84,14 @@ export function initBrain(brainPath: string): void {
 	// Create _agents inbox
 	mkdirSync(join(brainPath, '_agents', 'global_inbox'), { recursive: true });
 
+	// Create skills directory (Voyager-pattern skill library, outside subsumption cascade)
+	mkdirSync(join(brainPath, 'skills'), { recursive: true });
+	writeFileSync(
+		join(brainPath, 'skills', '_rules.md'),
+		'# Skills Library\n\nExecutable patterns learned through experience.\nNot part of the subsumption cascade — retrieval only.\n',
+		'utf8',
+	);
+
 	// Auto-add brain path to .gitignore if in a git repo
 	autoGitignore(brainPath);
 

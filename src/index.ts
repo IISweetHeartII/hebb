@@ -2,7 +2,7 @@
 
 export * from './types';
 export * from './constants';
-export { scanBrain } from './scanner';
+export { scanBrain, scanSkills } from './scanner';
 export { runSubsumption } from './subsumption';
 export { tokenize, stem, jaccardSimilarity } from './similarity';
 export { fireNeuron, getCurrentCounter } from './fire';
@@ -35,7 +35,7 @@ export type { DigestResult, ExtractedCorrection, ToolFailure } from './digest';
 export { resolveBrainRoot, resolveAgentBrain, resolveSharedBrain } from './constants';
 
 // Phase 4: Candidate Staging + Evolve Engine
-export { growCandidate, promoteCandidates, listCandidates, toCandidatePath, fromCandidatePath } from './candidates';
+export { growCandidate, promoteCandidates, listCandidates, toCandidatePath, fromCandidatePath, propagateToShared } from './candidates';
 export type { CandidateInfo, PromoteResult } from './candidates';
 export { runEvolve } from './evolve';
 export type { EvolveAction, EvolveResult, EvolveMode } from './evolve';
@@ -44,3 +44,8 @@ export type { EvolveAction, EvolveResult, EvolveMode } from './evolve';
 export { captureSessionStart, detectOutcome, buildOutcomeSummary, classifyOutcome } from './outcome';
 export type { SessionState, OutcomeResult } from './outcome';
 export { contraNeuron } from './fire';
+
+// Phase B: Voyager Full
+export { generatePrunePlist, generateFeedbackPlist, installCron, uninstallCron, checkCron } from './cron';
+export { scanSharedBrain, propagateToAgents, runFeedback } from './feedback';
+export type { SharedNeuronDelta, FeedbackResult } from './feedback';
