@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import type { SignalType } from './constants';
 import { resolveBrainRoot } from './constants';
 
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 
 const HELP = `
 hebbian v${VERSION} — Folder-as-neuron brain for any AI agent.
@@ -48,6 +48,7 @@ COMMANDS:
   digest [--transcript <path>]    Extract corrections from conversation
   candidates [promote]            List candidates or promote graduated ones
   evolve [--dry-run]              LLM-powered brain evolution (Gemini)
+  evolve prune [--dry-run]        Pruning mode — remove stale/redundant neurons
   session start|end               Capture/detect session outcomes
   sessions                        Show session outcome history
   doctor                          Self-diagnostic (hooks, brain, versions)
@@ -97,6 +98,7 @@ async function main(argv: string[]): Promise<void> {
 			transcript: { type: 'string', short: 't' },
 			'dry-run': { type: 'boolean' },
 			global: { type: 'boolean', short: 'g' },
+			agent: { type: 'string', short: 'a' },
 			help: { type: 'boolean', short: 'h' },
 			version: { type: 'boolean', short: 'v' },
 		},
@@ -116,7 +118,14 @@ async function main(argv: string[]): Promise<void> {
 		return;
 	}
 
-	const brainRoot = resolveBrainRoot(values.brain as string | undefined);
+	let brainRoot = resolveBrainRoot(values.brain as string | undefined);
+
+	// Multi-brain: --agent routes to brain/agents/{name}/
+	const agentName = values.agent as string | undefined;
+	if (agentName) {
+		const { resolveAgentBrain } = await import('./constants');
+		brainRoot = resolveAgentBrain(brainRoot, agentName);
+	}
 
 	switch (command) {
 		case 'init': {
@@ -299,8 +308,9 @@ async function main(argv: string[]): Promise<void> {
 		}
 		case 'evolve': {
 			const dryRun = values['dry-run'] === true;
+			const modeArg = positionals[1] === 'prune' ? 'prune' as const : 'default' as const;
 			const { runEvolve } = await import('./evolve');
-			await runEvolve(brainRoot, dryRun);
+			await runEvolve(brainRoot, dryRun, modeArg);
 			break;
 		}
 		case 'session': {

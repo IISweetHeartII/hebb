@@ -140,8 +140,16 @@ export function digestTranscript(brainRoot: string, transcriptPath: string, sess
 	for (const failure of toolFailures) {
 		logEpisode(brainRoot, 'tool-failure', failure.toolName, failure.errorText);
 	}
-	if (toolFailures.length > 0) {
-		console.log(`🔧 digest: ${toolFailures.length} tool failure(s) logged as episodes`);
+
+	// Detect retry patterns — same error 3+ times = persistent problem
+	const retries = detectRetryPatterns(toolFailures);
+	for (const retry of retries) {
+		logEpisode(brainRoot, 'retry-pattern', retry.toolName, retry.errorText);
+	}
+
+	const totalSignals = toolFailures.length + retries.length;
+	if (totalSignals > 0) {
+		console.log(`🔧 digest: ${toolFailures.length} tool failure(s), ${retries.length} retry pattern(s) logged`);
 	}
 
 	// Extract corrections
@@ -268,6 +276,32 @@ export function parseToolResults(transcriptPath: string): ToolFailure[] {
 	}
 
 	return failures;
+}
+
+/**
+ * Detect retry patterns — same error appearing 3+ times in a session.
+ * Returns deduplicated failures with retry count.
+ */
+export function detectRetryPatterns(failures: ToolFailure[]): ToolFailure[] {
+	const counts = new Map<string, { failure: ToolFailure; count: number }>();
+
+	for (const f of failures) {
+		// Key by first meaningful line of error (strips "Exit code N")
+		const key = f.toolName.toLowerCase().trim();
+		const existing = counts.get(key);
+		if (existing) {
+			existing.count++;
+		} else {
+			counts.set(key, { failure: f, count: 1 });
+		}
+	}
+
+	return [...counts.values()]
+		.filter((entry) => entry.count >= 3)
+		.map((entry) => ({
+			...entry.failure,
+			toolName: `[retry x${entry.count}] ${entry.failure.toolName}`,
+		}));
 }
 
 /**

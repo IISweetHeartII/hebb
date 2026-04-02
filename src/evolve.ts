@@ -50,7 +50,9 @@ const EVOLVE_COOLDOWN_FILE = 'hippocampus/evolve_last_run';
 
 // --- Main Entry ---
 
-export async function runEvolve(brainRoot: string, dryRun: boolean): Promise<EvolveResult> {
+export type EvolveMode = 'default' | 'prune';
+
+export async function runEvolve(brainRoot: string, dryRun: boolean, mode: EvolveMode = 'default'): Promise<EvolveResult> {
 	const apiKey = process.env.GEMINI_API_KEY;
 	if (!apiKey) {
 		console.error('❌ GEMINI_API_KEY not set. Get one at https://aistudio.google.com/apikey');
@@ -77,7 +79,9 @@ export async function runEvolve(brainRoot: string, dryRun: boolean): Promise<Evo
 	const brain = scanBrain(brainRoot);
 	const summary = buildBrainSummary(brain);
 	const outcomeSummary = buildOutcomeSummary(brainRoot);
-	const prompt = buildPrompt(summary, episodes, outcomeSummary);
+	const prompt = mode === 'prune'
+		? buildPrunePrompt(summary, episodes)
+		: buildPrompt(summary, episodes, outcomeSummary);
 
 	// 2. Call LLM
 	let rawActions: EvolveAction[];
@@ -199,6 +203,50 @@ Focus on: strengthening repeatedly-used rules, pruning ineffective ones, growing
 
 Respond with a JSON array of actions:
 [{"type":"fire","path":"cortex/NO_console_log","reason":"fired 3 times in recent sessions"}]`;
+}
+
+// --- Pruning Prompt (청소부 mode) ---
+
+function buildPrunePrompt(summary: string, episodes: Episode[]): string {
+	const episodeLines = episodes.length > 0
+		? episodes.map((e) => `- [${e.ts}] ${e.type}: ${sanitizeForPrompt(e.detail)}`).join('\n')
+		: '(no recent episodes)';
+
+	return `You are the PRUNING engine for a hebbian brain — a filesystem-based memory system for AI agents.
+
+Your job is CLEANUP. Remove what's stale, redundant, or harmful. Healthy forgetting.
+
+## Axioms
+- Folder = Neuron, File = Firing Trace, Counter = Activation strength
+- 7 regions: brainstem(P0) > limbic(P1) > hippocampus(P2) > sensors(P3) > cortex(P4) > ego(P5) > prefrontal(P6)
+- PROTECTED regions (brainstem, limbic, sensors): NEVER touch these
+
+## Current Brain
+${summary}
+
+## Recent Episodes (last ${episodes.length})
+${episodeLines}
+
+## Pruning Criteria
+1. **Stale neurons** — counter is low AND no recent episodes mention them. They occupy space but provide no value.
+2. **High contra ratio** — neurons present in many reverted sessions (contra_ratio > 0.7). They correlate with bad outcomes.
+3. **Redundant neurons** — two neurons in the same region with very similar names/meaning. Keep the stronger one, prune the weaker.
+4. **Contradicted neurons** — a newer neuron explicitly overrides an older one. Remove the older.
+
+## Available Actions (pruning-focused)
+- prune: Decrement a neuron's counter. Use for rules that aren't working.
+- decay: Mark inactive neurons as dormant. Use for stale rules with no recent activity.
+- signal: Add bomb signal to block a problematic neuron. Use for neurons that actively cause harm.
+
+Do NOT use grow or fire — this is a pruning pass, not a growth pass.
+
+## Constraints
+- Max ${MAX_ACTIONS} actions per cycle
+- NEVER target brainstem, limbic, or sensors regions
+- Be conservative — only prune what you're confident about
+
+Respond with a JSON array of actions:
+[{"type":"prune","path":"cortex/WARN_old_rule","reason":"not fired in 30+ days, no recent episodes"}]`;
 }
 
 // --- Gemini API ---

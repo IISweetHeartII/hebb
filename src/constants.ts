@@ -93,3 +93,16 @@ export function resolveBrainRoot(brainFlag?: string): string {
 	if (existsSync(resolve('./brain'))) return resolve('./brain');
 	return resolve(process.env.HOME || '~', 'hebbian', 'brain');
 }
+
+/** Resolve agent-specific brain path within a multi-brain setup */
+export function resolveAgentBrain(brainRoot: string, agentName: string): string {
+	return resolve(brainRoot, 'agents', agentName);
+}
+
+/** Resolve shared brain path within a multi-brain setup */
+export function resolveSharedBrain(brainRoot: string): string {
+	return resolve(brainRoot, 'shared');
+}
+
+export const AGENTS_DIR = 'agents';
+export const SHARED_DIR = 'shared';

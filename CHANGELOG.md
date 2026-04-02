@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 (2026-04-02)
+
+Voyager foundations — retry detection, pruning mode, multi-brain, auto-gitignore.
+
+### Added
+- **Retry pattern detection** — when the same error appears 3+ times in a session, logged as `retry-pattern` episode. Persistent problems surface automatically.
+- **`evolve prune`** — new pruning mode for the evolve engine. Uses a cleanup-focused LLM prompt that only prunes/decays/bombs. Run nightly as the "청소부" to prevent memory bloat.
+- **Multi-brain support** — `--agent <name>` flag routes all commands to `brain/agents/{name}/`. Individual brains for each agent, shared brain at `brain/shared/`.
+- **Auto-gitignore** — `hebbian init` automatically adds the brain directory to `.gitignore`. Personal learning data never leaks into shared repos.
+- `resolveAgentBrain()`, `resolveSharedBrain()` exported from public API
+
 ## 0.6.0 (2026-04-02)
 
 The brain that learns from failure — no words needed.
