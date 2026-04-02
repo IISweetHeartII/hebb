@@ -926,3 +926,66 @@ describe('soft failures in parseToolResults', () => {
 		expect(result.toolFailures).toBe(1);
 	});
 });
+
+// --- Agent-as-Evaluator Tests ---
+
+describe('agent-as-evaluator (auto-fire candidates)', () => {
+	it('fires candidates when session has no corrections', () => {
+		const { root } = setupTestBrain();
+
+		// Create a candidate manually
+		const candDir = join(root, 'cortex', '_candidates', 'NO_test_rule');
+		mkdirSync(candDir, { recursive: true });
+		writeFileSync(join(candDir, '1.neuron'), '{}', 'utf8');
+
+		// Digest a clean transcript (no corrections)
+		const dir = makeTempDir();
+		const transcript = writeTranscript(dir, ['Can you help me?'], 'eval-test');
+		digestTranscript(root, transcript, 'eval-test');
+
+		// Candidate should have been fired (counter 1 → 2)
+		const files = require('node:fs').readdirSync(candDir) as string[];
+		const maxCounter = Math.max(...files.filter((f: string) => /^\d+\.neuron$/.test(f)).map((f: string) => parseInt(f)));
+		expect(maxCounter).toBe(2);
+	});
+
+	it('does NOT fire candidates when session has corrections', () => {
+		const { root } = setupTestBrain();
+
+		// Create a candidate
+		const candDir = join(root, 'cortex', '_candidates', 'NO_another_rule');
+		mkdirSync(candDir, { recursive: true });
+		writeFileSync(join(candDir, '1.neuron'), '{}', 'utf8');
+
+		// Digest a transcript WITH a correction
+		const dir = makeTempDir();
+		const transcript = writeTranscript(dir, [
+			"don't use console.log for debugging in the app",
+		], 'eval-corr-test');
+		digestTranscript(root, transcript, 'eval-corr-test');
+
+		// Candidate counter should still be 1 (not fired)
+		const files = require('node:fs').readdirSync(candDir) as string[];
+		const maxCounter = Math.max(...files.filter((f: string) => /^\d+\.neuron$/.test(f)).map((f: string) => parseInt(f)));
+		expect(maxCounter).toBe(1);
+	});
+
+	it('promotes candidate after 3 sessions without corrections', () => {
+		const { root } = setupTestBrain();
+
+		// Create a candidate at counter 2 (needs 1 more to graduate)
+		const candDir = join(root, 'cortex', '_candidates', 'NO_promoted_rule');
+		mkdirSync(candDir, { recursive: true });
+		writeFileSync(join(candDir, '1.neuron'), '{}', 'utf8');
+		writeFileSync(join(candDir, '2.neuron'), '{}', 'utf8');
+
+		// One clean session should push it to 3 → graduation
+		const dir = makeTempDir();
+		const transcript = writeTranscript(dir, ['hello'], 'promote-test');
+		digestTranscript(root, transcript, 'promote-test');
+
+		// Candidate should have been promoted to permanent neuron
+		const promotedDir = join(root, 'cortex', 'NO_promoted_rule');
+		expect(existsSync(promotedDir)).toBe(true);
+	});
+});

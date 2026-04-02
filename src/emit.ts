@@ -16,6 +16,7 @@ import {
 } from './constants';
 import type { RegionName } from './constants';
 import type { Neuron, Region, Brain, SubsumptionResult } from './types';
+import { listCandidates } from './candidates';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TIER 1: Bootstrap (~500 tokens)
@@ -24,7 +25,7 @@ import type { Neuron, Region, Brain, SubsumptionResult } from './types';
 /**
  * Generate Tier 1 bootstrap content.
  */
-export function emitBootstrap(result: SubsumptionResult, brain: Brain): string {
+export function emitBootstrap(result: SubsumptionResult, brain: Brain, brainRoot?: string): string {
 	const lines: string[] = [];
 	const now = new Date().toISOString().replace(/\.\d+Z$/, '');
 
@@ -92,6 +93,22 @@ export function emitBootstrap(result: SubsumptionResult, brain: Brain): string {
 		lines.push(`| ${icon} ${region.name} | ${active.length} | ${activation} |`);
 	}
 	lines.push('');
+
+	// Provisional rules — candidates being evaluated by the agent
+	if (brainRoot) {
+		const candidates = listCandidates(brainRoot);
+		if (candidates.length > 0) {
+			const top = candidates.slice(0, 5); // Limit to 5 to keep Tier 1 lean
+			lines.push('### Provisional Rules (evaluating)');
+			lines.push('Follow these during this session. They graduate after 3 sessions.');
+			for (const c of top) {
+				const bar = '\u2588'.repeat(c.counter) + '\u2591'.repeat(Math.max(0, 3 - c.counter));
+				lines.push(`- ${bar} ${pathToSentence(c.targetPath)}`);
+			}
+			lines.push('');
+		}
+	}
+
 	lines.push(MARKER_END);
 
 	return lines.join('\n');
@@ -228,7 +245,7 @@ export function emitRegionRules(region: Region): string {
 export function emitToTarget(brainRoot: string, target: string): void {
 	const brain = scanBrain(brainRoot);
 	const result = runSubsumption(brain);
-	const content = emitBootstrap(result, brain);
+	const content = emitBootstrap(result, brain, brainRoot);
 
 	if (target === 'all') {
 		for (const [name, filePath] of Object.entries(EMIT_TARGETS)) {

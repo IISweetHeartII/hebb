@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.0 (2026-04-02)
+
+Agent-as-Evaluator — self-learning without API keys.
+
+### Added
+- **Provisional rules in CLAUDE.md** — pending candidates are emitted as "Provisional Rules (evaluating)" in Tier 1 bootstrap. The running agent sees them every session and naturally follows them.
+- **Auto-fire candidates at session end** — when a session ends without corrections (no friction), all pending candidates are fired (counter +1). Candidates graduate to permanent neurons after 3 clean sessions. Sessions with corrections skip auto-fire.
+- 3 new tests (339 total): auto-fire on clean session, skip on correction session, promotion after 3 sessions
+
+### Changed
+- `emitBootstrap` accepts optional `brainRoot` parameter to include candidates
+- `digestTranscript` calls `autoFireCandidates` before returning
+
 ## 0.9.0 (2026-04-02)
 
 Digest quality overhaul — Korean false positive reduction.

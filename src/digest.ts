@@ -14,7 +14,8 @@ interface AuditMeta {
 	lineCount: number;
 }
 import { MAX_CORRECTIONS_PER_SESSION, MIN_CORRECTION_LENGTH, DIGEST_LOG_DIR } from './constants';
-import { growCandidate } from './candidates';
+import { growCandidate, listCandidates, CANDIDATE_THRESHOLD } from './candidates';
+import { fireNeuron } from './fire';
 import { logEpisode } from './episode';
 // tokenize() not used here — digest uses its own unstemmed split for readable names.
 // tokenize() with stemming is for Jaccard similarity in grow.ts.
@@ -170,7 +171,10 @@ export function digestTranscript(brainRoot: string, transcriptPath: string, sess
 	// Extract corrections
 	const corrections = extractCorrections(messages);
 
-	if (corrections.length === 0 && toolFailures.length === 0) {
+	// Agent-as-evaluator: fire candidates that survived this session without corrections
+	const fired = autoFireCandidates(brainRoot, corrections);
+
+	if (corrections.length === 0 && toolFailures.length === 0 && fired === 0) {
 		console.log(`\uD83D\uDCDD digest: no corrections found in session ${resolvedSessionId}`);
 		writeAuditLog(brainRoot, resolvedSessionId, [], totalLines);
 		return { corrections: 0, skipped: messages.length, toolFailures: toolFailures.length, transcriptPath, sessionId: resolvedSessionId };
@@ -486,6 +490,37 @@ function isNarrativeKorean(text: string): boolean {
 	const markerCount = NARRATIVE_MARKERS.filter((p) => p.test(text)).length;
 	// 2+ narrative markers = definitely a story, not a correction
 	return markerCount >= 2;
+}
+
+/**
+ * Agent-as-evaluator: fire candidates that survived this session.
+ * If the session had zero corrections, all candidates advance (the agent
+ * followed the provisional rules and the user didn't complain).
+ * If there were corrections, skip (friction = don't advance).
+ * Returns the number of candidates fired.
+ */
+function autoFireCandidates(brainRoot: string, corrections: ExtractedCorrection[]): number {
+	if (corrections.length > 0) return 0; // Session had friction — don't advance
+
+	const candidates = listCandidates(brainRoot);
+	if (candidates.length === 0) return 0;
+
+	let fired = 0;
+	for (const cand of candidates) {
+		try {
+			const newCounter = fireNeuron(brainRoot, cand.candidatePath);
+			fired++;
+			// Check if candidate graduated
+			if (newCounter >= CANDIDATE_THRESHOLD) {
+				growCandidate(brainRoot, cand.targetPath);
+			}
+		} catch { /* skip on error */ }
+	}
+
+	if (fired > 0) {
+		console.log(`🔄 agent-evaluator: ${fired} candidate(s) advanced (session without corrections)`);
+	}
+	return fired;
 }
 
 /**
