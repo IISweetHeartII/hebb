@@ -222,6 +222,13 @@ export function extractCorrections(messages: string[]): ExtractedCorrection[] {
 		// Skip questions (end with ?)
 		if (text.trim().endsWith('?')) continue;
 
+		// Skip system-injected XML tags (Claude Code injects these into user turns)
+		// e.g. <local-command-caveat>, <command-message>, <task-notification>
+		if (/^<[a-zA-Z]/.test(text.trim())) continue;
+
+		// Skip skill base directory injections
+		if (/^Base directory for this skill:/i.test(text.trim())) continue;
+
 		// Check for correction patterns
 		const correction = detectCorrection(text);
 		if (correction) {

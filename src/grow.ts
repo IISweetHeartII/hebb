@@ -33,6 +33,9 @@ export function growNeuron(brainRoot: string, neuronPath: string): GrowResult {
 	}
 
 	// Extract region name and leaf name
+	if (neuronPath.includes('..') || neuronPath.startsWith('/')) {
+		throw new Error(`Invalid neuron path: "${neuronPath}" (path traversal not allowed)`);
+	}
 	const parts = neuronPath.split('/');
 	const regionName = parts[0]!;
 	if (!(REGIONS as readonly string[]).includes(regionName)) {

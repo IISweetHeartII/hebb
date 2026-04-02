@@ -99,10 +99,21 @@ function error(res: ServerResponse, message: string, status = 400): void {
 	json(res, { error: message }, status);
 }
 
+const MAX_BODY_BYTES = 1_048_576; // 1 MB
+
 async function readBody(req: IncomingMessage): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
-		req.on('data', (chunk: Buffer) => chunks.push(chunk));
+		let total = 0;
+		req.on('data', (chunk: Buffer) => {
+			total += chunk.length;
+			if (total > MAX_BODY_BYTES) {
+				reject(new Error('Request body too large'));
+				req.destroy();
+				return;
+			}
+			chunks.push(chunk);
+		});
 		req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
 		req.on('error', reject);
 	});

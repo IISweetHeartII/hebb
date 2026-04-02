@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.1 (2026-04-02)
+
+Security hardening and self-learning correctness fixes.
+
+### Fixed
+- **Digest false positives** — system-injected XML tags (`<local-command-caveat>`, `<command-message>`, `<task-notification>`) and skill base directory messages were being misidentified as user corrections, creating garbage neurons. Now filtered.
+- **GEMINI_API_KEY URL leak** — API key was appended as `?key=...` in the Gemini request URL, leaking it to proxies and HTTP logs. Moved to `x-goog-api-key` header.
+- **Path traversal in LLM actions** — `validateActions()` checked region names but not `..` components. A prompt-injected action like `cortex/../../.bashrc` would pass. Now blocked in both `validateActions` and `growNeuron`.
+- **Prompt injection via episode.detail** — episode detail strings were embedded verbatim in the Gemini prompt. Sanitized to single line, stripped of markdown header markers.
+- **Prompt injection via outcome summary** — neuron paths in `buildOutcomeSummary` now have newlines and `#` stripped before embedding in the LLM prompt.
+
+### Added
+- **Evolve cooldown** — `hebbian evolve` enforces a 60-second cooldown between calls to prevent runaway API costs. Override with `EVOLVE_NO_COOLDOWN=1` or configure via `EVOLVE_COOLDOWN_SECONDS`.
+- **REST API body size limit** — `POST` endpoints now reject requests over 1 MB to prevent OOM denial-of-service.
+
 ## 0.5.0 (2026-04-01)
 
 The brain that learns from outcomes. Two major phases ship together: Immune System (Phase 4) and Feedback Loop (Phase 5).

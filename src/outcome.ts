@@ -302,8 +302,10 @@ export function buildOutcomeSummary(brainRoot: string): string {
 
 	for (const [neuron, s] of sorted) {
 		const ratio = s.sessions > 0 ? (s.reverts / s.sessions).toFixed(2) : '0.00';
-		const trend = parseFloat(ratio) > 0.5 ? '← act on this' : parseFloat(ratio) > 0.3 ? '← watch' : '';
-		lines.push(`- ${neuron}: sessions=${s.sessions} reverts=${s.reverts} acceptances=${s.acceptances} contra_ratio=${ratio} ${trend}`);
+		const trend = parseFloat(ratio) > 0.5 ? 'act on this' : parseFloat(ratio) > 0.3 ? 'watch' : '';
+		// Sanitize neuron path: strip newlines to prevent prompt section injection
+		const safePath = neuron.replace(/[\n\r#]/g, ' ').trim();
+		lines.push(`- ${safePath}: sessions=${s.sessions} reverts=${s.reverts} acceptances=${s.acceptances} contra_ratio=${ratio} ${trend}`);
 	}
 
 	lines.push('');

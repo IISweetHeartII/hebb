@@ -10,6 +10,8 @@
 // Currently supports Gemini only. Other providers (Groq, OpenAI,
 // Anthropic, Ollama) planned for future expansion.
 
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { readEpisodes, logEpisode } from './episode';
 import type { Episode } from './episode';
 import { scanBrain } from './scanner';
@@ -44,6 +46,7 @@ const PROTECTED_REGIONS = ['brainstem', 'limbic', 'sensors'];
 const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
 const API_TIMEOUT = 30_000;
 const RETRY_DELAY = 5_000;
+const EVOLVE_COOLDOWN_FILE = 'hippocampus/evolve_last_run';
 
 // --- Main Entry ---
 
@@ -52,6 +55,21 @@ export async function runEvolve(brainRoot: string, dryRun: boolean): Promise<Evo
 	if (!apiKey) {
 		console.error('❌ GEMINI_API_KEY not set. Get one at https://aistudio.google.com/apikey');
 		return { actions: [], executed: 0, skipped: 0, dryRun };
+	}
+
+	// Cooldown check — prevents runaway API calls (default 60s, bypass with EVOLVE_NO_COOLDOWN=1)
+	if (!dryRun && process.env.EVOLVE_NO_COOLDOWN !== '1') {
+		const cooldownMs = (parseInt(process.env.EVOLVE_COOLDOWN_SECONDS ?? '60', 10) || 60) * 1000;
+		const cooldownPath = join(brainRoot, EVOLVE_COOLDOWN_FILE);
+		if (existsSync(cooldownPath)) {
+			const lastRun = parseInt(readFileSync(cooldownPath, 'utf8').trim(), 10);
+			const elapsed = Date.now() - lastRun;
+			if (elapsed < cooldownMs) {
+				const remaining = Math.ceil((cooldownMs - elapsed) / 1000);
+				console.log(`⏳ evolve cooldown: ${remaining}s remaining (use EVOLVE_NO_COOLDOWN=1 to bypass)`);
+				return { actions: [], executed: 0, skipped: 0, dryRun };
+			}
+		}
 	}
 
 	// 1. Gather context
@@ -94,6 +112,9 @@ export async function runEvolve(brainRoot: string, dryRun: boolean): Promise<Evo
 	logEpisode(brainRoot, 'evolve', '', `${executed} action(s) executed, ${skipped} skipped`);
 	console.log(`🧠 evolve: ${executed} action(s) executed, ${skipped} skipped`);
 
+	// Record timestamp for cooldown
+	writeFileSync(join(brainRoot, EVOLVE_COOLDOWN_FILE), String(Date.now()), 'utf8');
+
 	return { actions, executed, skipped, dryRun: false };
 }
 
@@ -124,11 +145,22 @@ export function buildBrainSummary(brain: Brain): string {
 	return lines.join('\n');
 }
 
+// --- Prompt Sanitization ---
+
+/**
+ * Strip content that could inject markdown sections or override LLM instructions.
+ * Takes only the first line and removes leading header markers.
+ */
+function sanitizeForPrompt(text: string): string {
+	const firstLine = (text.split('\n')[0] ?? '').trim();
+	return firstLine.replace(/^#+\s*/g, '').slice(0, 200);
+}
+
 // --- Prompt Construction ---
 
 export function buildPrompt(summary: string, episodes: Episode[], outcomeSummary?: string): string {
 	const episodeLines = episodes.length > 0
-		? episodes.map((e) => `- [${e.ts}] ${e.type}: ${e.path} — ${e.detail}`).join('\n')
+		? episodes.map((e) => `- [${e.ts}] ${e.type}: ${e.path} — ${sanitizeForPrompt(e.detail)}`).join('\n')
 		: '(no recent episodes)';
 
 	const outcomeSection = outcomeSummary || '';
@@ -173,7 +205,7 @@ Respond with a JSON array of actions:
 
 export async function callGemini(prompt: string, apiKey: string): Promise<EvolveAction[]> {
 	const model = process.env.EVOLVE_MODEL || DEFAULT_MODEL;
-	const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+	const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 	const body = {
 		contents: [{ parts: [{ text: prompt }] }],
@@ -194,7 +226,7 @@ export async function callGemini(prompt: string, apiKey: string): Promise<Evolve
 		try {
 			const res = await fetch(url, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
 				body: JSON.stringify(body),
 				signal: AbortSignal.timeout(API_TIMEOUT),
 			});
@@ -269,6 +301,11 @@ export function parseActions(text: string): EvolveAction[] {
 export function validateActions(actions: EvolveAction[], _brain: Brain): EvolveAction[] {
 	return actions
 		.filter((action) => {
+			// Block path traversal attempts
+			if (action.path.includes('..') || action.path.startsWith('/')) {
+				console.log(`   ⚠️ blocked: ${action.type} ${action.path} (path traversal)`);
+				return false;
+			}
 			const region = action.path.split('/')[0];
 			if (!region || PROTECTED_REGIONS.includes(region)) {
 				console.log(`   🛡️ blocked: ${action.type} ${action.path} (protected region)`);
