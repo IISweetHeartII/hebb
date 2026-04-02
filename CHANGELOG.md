@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2 (2026-04-02)
+
+Same as 0.5.1 — fixes hardcoded VERSION constant in CLI (was still showing v0.5.0).
+
 ## 0.5.1 (2026-04-02)
 
 Security hardening and self-learning correctness fixes.
