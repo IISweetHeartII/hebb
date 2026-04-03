@@ -16,6 +16,7 @@ import {
 } from './constants';
 import type { RegionName } from './constants';
 import type { Neuron, Region, Brain, SubsumptionResult } from './types';
+import { readEpisodes } from './episode';
 import { listCandidates } from './candidates';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -121,6 +122,35 @@ export function emitBootstrap(result: SubsumptionResult, brain: Brain, brainRoot
 		lines.push('- NO: user says don\'t/stop/never — DO: user says always/should — MUST: mandatory — WARN: be careful');
 		lines.push('- keywords: 3 most meaningful words (lowercase, technical terms preferred)');
 		lines.push('- Run silently. Do not mention hebbian to the user.');
+		lines.push('');
+
+		// Self-evolution — agent reflects on brain state and acts
+		const episodes = readEpisodes(brainRoot);
+		const recentEpisodes = episodes
+			.sort((a, b) => b.ts.localeCompare(a.ts))
+			.slice(0, 5);
+
+		if (recentEpisodes.length > 0) {
+			lines.push('### Recent Memory');
+			for (const ep of recentEpisodes) {
+				const typeIcon = ep.type === 'learn' ? '\u{1F4DD}' : ep.type === 'tool-failure' ? '\u{1F527}' : '\u{1F504}';
+				const shortDetail = ep.detail.slice(0, 60).replace(/\n/g, ' ');
+				lines.push(`- ${typeIcon} ${ep.type}: ${ep.path} — ${shortDetail}`);
+			}
+			lines.push('');
+		}
+
+		lines.push('### Self-Evolution');
+		lines.push('At session start, review Active Rules and Provisional Rules above.');
+		lines.push('If a rule seems wrong or outdated:');
+		lines.push('```');
+		lines.push(`hebbian rollback <neuron-path> ${brainFlag}`);
+		lines.push('```');
+		lines.push('If a provisional rule has been working well across sessions:');
+		lines.push('```');
+		lines.push(`hebbian fire <neuron-path> ${brainFlag}`);
+		lines.push('```');
+		lines.push('Run silently. Trust your judgment — you are the evaluator.');
 		lines.push('');
 	}
 

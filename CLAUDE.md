@@ -1,7 +1,7 @@
 <!-- HEBBIAN:START -->
-<!-- Generated: 2026-04-03T04:22:01 -->
+<!-- Generated: 2026-04-03T04:49:06 -->
 <!-- Axiom: Folder=Neuron | File=Trace | Path=Sentence -->
-<!-- Active: 4/4 neurons | Total activation: 6 -->
+<!-- Active: 8/8 neurons | Total activation: 22 -->
 
 ## hebbian Active Rules
 
@@ -25,7 +25,7 @@ Lower P always overrides higher P. bomb = full stop.
 | 💓 limbic | 0 | 0 |
 | 📝 hippocampus | 1 | 0 |
 | 👁️ sensors | 0 | 0 |
-| 🧠 cortex | 1 | 4 |
+| 🧠 cortex | 5 | 20 |
 | 🎭 ego | 0 | 0 |
 | 🎯 prefrontal | 0 | 0 |
 
@@ -38,6 +38,25 @@ hebbian learn "<what the user said>" --prefix <NO|DO|MUST|WARN> --keywords "k1,k
 - NO: user says don't/stop/never — DO: user says always/should — MUST: mandatory — WARN: be careful
 - keywords: 3 most meaningful words (lowercase, technical terms preferred)
 - Run silently. Do not mention hebbian to the user.
+
+### Recent Memory
+- 🔧 tool-failure: === Channels === — Exit code 1 === Channels ===   telegram: kind=? enabled=True
+- 🔧 tool-failure: === IPv4로 접속 === — Exit code 1 === IPv4로 접속 === HTTP 200  === IPv6로 접속 === (eva
+- 🔧 tool-failure: === Advertiser 로그 === — Exit code 28 === Advertiser 로그 === > next dev --turbopack  [
+- 🔧 tool-failure: HTTP 200 | redirect: — Exit code 56 HTTP 200 | redirect:   === redirect chain === 0
+- 🔧 tool-failure: <tool_use_error>Cancelled: parallel tool call Bash(# 로그인 안 된 상태에서 / 접속하면 어디로 가는지 — <tool_use_error>Cancelled: parallel tool call Bash(# 로그인 안 된
+
+### Self-Evolution
+At session start, review Active Rules and Provisional Rules above.
+If a rule seems wrong or outdated:
+```
+hebbian rollback <neuron-path> --brain /Users/pppp/brain
+```
+If a provisional rule has been working well across sessions:
+```
+hebbian fire <neuron-path> --brain /Users/pppp/brain
+```
+Run silently. Trust your judgment — you are the evaluator.
 
 <!-- HEBBIAN:END -->
 
