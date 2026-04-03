@@ -60,9 +60,8 @@ hebbian candidates
 
 ```bash
 npx hebbian init ./brain
-npx hebbian grow brainstem/禁fallback --brain ./brain
-npx hebbian emit claude --brain ./brain    # → CLAUDE.md
-npx hebbian evolve --dry-run               # → (optional) LLM proposes brain mutations
+npx hebbian grow brainstem/NO_fallback --brain ./brain
+npx hebbian emit claude --brain ./brain    # → CLAUDE.md (with Self-Learning instructions)
 ```
 
 | Before | hebbian |
@@ -72,6 +71,8 @@ npx hebbian evolve --dry-run               # → (optional) LLM proposes brain m
 | Switch AI → full migration | `cp -r brain/` — 1 second |
 | Rule violation → wishful thinking | `bomb.neuron` → **cascade halt** |
 | Rules accumulate forever | Candidates decay if not confirmed |
+| English-only learning | **Any language** — the agent IS the LLM |
+| Separate LLM for evolution | **Zero external API** — agent self-evolves |
 
 ---
 
@@ -80,20 +81,29 @@ npx hebbian evolve --dry-run               # → (optional) LLM proposes brain m
 ### Architecture
 
 ```
-Claude Code session
+Any AI agent session (Claude Code / Cursor / Copilot / OpenClaw / ...)
         │
-  SessionStart hook               Stop hook
-        │                              │
-   hebbian emit                   hebbian digest
-        │                              │
-   CLAUDE.md ←── brain ──→ corrections → _candidates/
-        │                                      │
-   "Provisional Rules"              agent-evaluator:
-   (candidates shown to agent)      clean session → fire (+1)
-                                    3 fires → permanent neuron
+  SessionStart hook                          Stop hook
+        │                                        │
+   hebbian decay (auto-cleanup)              hebbian digest (EN+KR fallback)
+   hebbian emit (inject brain)               hebbian session end (git diff)
+        │                                        │
+   Agent config ←── brain                   corrections → _candidates/
+        │                                              │
+   ┌─ Active Rules                          agent-evaluator:
+   ├─ Provisional Rules                     clean session → fire (+1)
+   ├─ Recent Memory (last 5 episodes)       3 fires → permanent neuron
+   ├─ Self-Learning instruction
+   └─ Self-Evolution instruction
+        │
+  During conversation:
+   ├─ User corrects agent → agent calls hebbian learn (any language)
+   └─ Agent reviews rules → agent calls fire/rollback (self-evolution)
 
-   No API keys. The running agent IS the evaluator.
+   No API keys. The running agent IS the learner AND the evaluator.
 ```
+
+**Key insight:** The agent that's already running is an LLM. It understands corrections in any language. It can evaluate whether rules are working. No separate Gemini/OpenAI call needed.
 
 ### Candidate Staging (immune system)
 
@@ -139,27 +149,67 @@ bomb.neuron in any region → cascade halt.
 
 ---
 
-## Claude Code Integration
+## Agent-Driven Learning (v0.11.0+)
 
-One command to set up:
+The running agent detects corrections and learns in real-time. Works with **any agent framework** that can run shell commands.
 
-```bash
-hebbian claude install
-```
+### How it works
 
-This adds two hooks to `.claude/settings.local.json`:
-
-| Hook | Command | When |
-|------|---------|------|
-| `SessionStart` | `hebbian emit claude` | Injects brain + provisional rules into CLAUDE.md |
-| `Stop` | `hebbian digest` | Extracts corrections, detects tool failures, auto-fires candidates |
-
-Check status anytime:
+1. `hebbian emit` injects **Self-Learning instructions** into the agent's config file
+2. When the user corrects the agent, the agent calls `hebbian learn`
+3. The correction becomes a candidate neuron (counter starts at 1)
+4. After 3 clean sessions, it graduates to a permanent rule
 
 ```bash
-hebbian claude status
-hebbian doctor       # full diagnostic
+# The agent calls this automatically when it detects a correction:
+hebbian learn "don't use console.log" --prefix NO --keywords "console,log,debug" --brain ./brain
+
+# Works in any language — the agent understands:
+hebbian learn "console.log 쓰지마" --prefix NO --keywords "console,log" --brain ./brain
+hebbian learn "не используй console.log" --prefix NO --keywords "console,log" --brain ./brain
 ```
+
+### Self-Evolution (v0.11.1+)
+
+The agent also evolves the brain without external APIs:
+
+- **Recent Memory** — emit shows the last 5 episodes so the agent has cross-session context
+- **Self-Evolution** — the agent reviews Active Rules and fires/rollbacks based on its own judgment
+- **Automatic decay** — stale neurons (30 days inactive) are cleaned up on every session start
+
+No Gemini. No OpenAI. The agent that's already running does everything.
+
+---
+
+## Agent Integration
+
+### Claude Code
+
+```bash
+hebbian claude install       # one command
+hebbian claude status        # check hooks
+hebbian doctor               # full diagnostic
+```
+
+This adds hooks to `.claude/settings.local.json`:
+
+| Hook | Commands | When |
+|------|----------|------|
+| `SessionStart` | `decay → emit → session start` | Cleanup, inject brain, capture git state |
+| `Stop` | `digest → session end` | Extract corrections, detect outcomes |
+
+### Other Agents
+
+hebbian works with any agent that reads a config file:
+
+| Agent | Command | Config File |
+|-------|---------|-------------|
+| Cursor | `hebbian emit cursor` | `.cursorrules` |
+| GitHub Copilot | `hebbian emit copilot` | `.github/copilot-instructions.md` |
+| Gemini | `hebbian emit gemini` | `.gemini/GEMINI.md` |
+| Any agent | `hebbian emit generic` | `.neuronrc` |
+
+The emitted file includes Self-Learning and Self-Evolution instructions that any LLM agent can follow.
 
 ---
 
@@ -198,20 +248,16 @@ hebbian grow cortex/OTHER_RULE --agent coo --brain ./brain
 
 ---
 
-## LLM Evolution (optional)
+## LLM Evolution (optional power feature)
 
-> **Note:** Self-learning works without this. The agent-as-evaluator loop (digest → candidates → auto-fire) requires zero API keys. LLM evolve is an optional power feature for advanced brain mutations.
+> **You don't need this.** Agent-driven learning (v0.11.0+) handles corrections, evolution, and cleanup without any external API. This is for power users who want batch brain analysis via Gemini.
 
 ```bash
 GEMINI_API_KEY=... hebbian evolve --dry-run --brain ./brain
-
-# Pruning mode (nightly cleaner — remove stale/redundant neurons)
 GEMINI_API_KEY=... hebbian evolve prune --dry-run --brain ./brain
 ```
 
-The evolve engine reads the last 100 episodes + current brain state, sends it to Gemini, and proposes up to 10 mutations per cycle. Protected regions (brainstem/limbic/sensors) are blocked.
-
-Actions: `grow`, `fire`, `signal`, `prune`, `decay`. **Pruning mode** removes stale neurons (30+ days inactive), high contra ratio (>0.7), redundant duplicates.
+Reads the last 100 episodes + brain state, sends to Gemini, proposes up to 10 mutations per cycle. Protected regions (brainstem/limbic/sensors) are blocked.
 
 ---
 
@@ -232,6 +278,9 @@ hebbian signal <type> <neuron-path>     # Add signal (dopamine/bomb/memory)
 hebbian decay [--days N]                # Mark inactive neurons dormant
 hebbian dedup                           # Batch merge similar neurons
 
+# Agent-driven learning (any language, any agent)
+hebbian learn "<text>" --prefix NO --keywords "k1,k2,k3"
+
 # Candidates
 hebbian candidates                      # List pending candidates
 hebbian candidates promote              # Promote graduated, decay stale
@@ -239,11 +288,15 @@ hebbian candidates promote              # Promote graduated, decay stale
 # Emit / compile
 hebbian emit <target> [--brain <path>]  # claude/cursor/gemini/copilot/generic/all
 
-# Claude Code
-hebbian claude install|uninstall|status
-hebbian digest [--transcript <path>]
+# Agent integration
+hebbian claude install|uninstall|status # Claude Code hooks
+hebbian digest [--transcript <path>]    # Transcript correction extraction (fallback)
 
-# Evolution (optional — self-learning works without this)
+# Session tracking
+hebbian session start|end               # Capture/detect session outcomes
+hebbian sessions                        # Show session outcome history
+
+# Evolution (optional power feature — learning works without this)
 GEMINI_API_KEY=... hebbian evolve [--dry-run]
 GEMINI_API_KEY=... hebbian evolve prune [--dry-run]
 
@@ -269,9 +322,12 @@ hebbian emit claude --agent coo          # Emits from brain/agents/coo/
 
 | Feature | .cursorrules / CLAUDE.md | Mem0 / MemOS | hebbian |
 |---------|--------------------------|-------------|------|
-| Self-learning | ❌ manual | ✅ vector DB | ✅ filesystem + agent-evaluator (no API key) |
+| Self-learning | ❌ manual | ✅ vector DB | ✅ agent-driven (any language, no API key) |
+| Self-evolution | ❌ | ❌ | ✅ agent reviews & evolves its own rules |
+| Multi-language | N/A | English-centric | **Any** — agent IS the LLM |
+| Agent-agnostic | One AI only | API lock-in | **Any agent** (Claude/Cursor/Copilot/custom) |
 | Infrastructure | $0 | $$$ | **$0** |
-| Switch AI | Manual migration | Full re-setup | **`cp -r brain/`** |
+| Switch AI | Manual migration | Full re-setup | **`cp -r brain/`** — 1 second |
 | Immutable guardrails | None | None | **brainstem + bomb** |
 | False-positive protection | None | None | **candidate staging** |
 | Audit trail | Text file | DB logs | **`ls -R` = full history** |
@@ -315,7 +371,7 @@ Written in **TypeScript 6.0**, built with tsup, tested with vitest.
 
 ## Governance
 
-277 tests pass in ~10s:
+364 tests pass in ~10s:
 
 - **SCC** (Subsumption Cascade Correctness): 100%
 - **MLA** (Memory Lifecycle Accuracy): 100%
