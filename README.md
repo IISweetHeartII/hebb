@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=flat-square&logo=typescript" />
   <img src="https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=node.js" />
   <img src="https://img.shields.io/badge/Runtime_Deps-0-brightgreen?style=flat-square" />
-  <img src="https://img.shields.io/badge/Tests-339-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/Tests-364-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/MIT-green?style=flat-square" />
 </p>
 
@@ -28,24 +28,26 @@ hebbian claude install       # attach to Claude Code (hooks)
 claude
 ```
 
-During the session, correct Claude once:
+During the session, correct the agent in **any language**:
 
 ```
 you: don't use console.log, always use the logger utility
+you: console.log 쓰지마, logger 써
+you: やめて、console.logを使わないで
 ```
 
+The agent detects the correction and runs `hebbian learn` automatically:
+
 ```bash
-# 3. End the session (hooks auto-run)
-#    → hebbian digest extracts the correction → creates candidate
-#    → agent-evaluator auto-fires candidates (no corrections = +1)
+# 📝 learned: cortex/NO_console_log (agent)
 
 hebbian candidates
 #   █░░  1/3  cortex/NO_console_log  (0d idle)
 
-# 4. After 2 more clean sessions, it graduates automatically:
+# 3. After 2 more clean sessions, it graduates automatically:
 #   🎓 promoted: cortex/NO_console_log → permanent neuron
 
-# 5. Next session — Claude sees the rule in CLAUDE.md
+# 4. Next session — the agent sees the rule and follows it
 ```
 
 **That's it.** One correction → candidate. Three clean sessions → permanent. **No API keys needed.**

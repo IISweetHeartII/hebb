@@ -199,6 +199,49 @@ Features ported from [NeuronFS](https://github.com/rhino-acoustic/NeuronFS) (Go,
 
 ---
 
+---
+
+## Phase 6 — v0.11.x: Agent-Driven Learning (DONE)
+
+The agent IS the LLM. No external API needed for learning or evolution.
+
+### 6.1 `hebbian learn` (v0.11.0)
+
+Real-time correction registration. Any agent, any language.
+
+- [x] `hebbian learn "<text>" --prefix NO --keywords "k1,k2,k3"` — agent-classified mode
+- [x] Regex fallback when --prefix/--keywords omitted (EN+KR only)
+- [x] Keyword sanitizer preserves all Unicode scripts (Cyrillic, Arabic, CJK, etc.)
+- [x] Self-Learning instruction emitted to all targets (claude/cursor/gemini/copilot/generic)
+- [x] Doctor hook detection: global + local settings, correct nesting traversal
+
+### 6.2 Self-Evolution (v0.11.1)
+
+Agent evaluates brain state and acts. Zero external API dependency.
+
+- [x] Recent Memory in emit — last 5 episodes shown in CLAUDE.md
+- [x] Self-Evolution instruction — agent fires/rollbacks based on judgment
+- [x] Automatic decay on SessionStart hook
+- [x] `evolve` (Gemini) demoted to optional power feature
+
+### Architecture Shift
+
+```
+Before (v0.5.0-v0.10.0):
+  session end → regex/Gemini → learn
+
+After (v0.11.x):
+  during session → agent detects → hebbian learn (any language)
+  session start  → agent reviews → fire/rollback (self-evolution)
+  session start  → hebbian decay (automatic cleanup)
+  session end    → digest fallback (EN+KR regex safety net)
+```
+
+The running agent replaces both regex pattern matching AND the Gemini evolve engine.
+`evolve` remains available for power users with GEMINI_API_KEY but is not required.
+
+---
+
 ## Version Timeline
 
 | Version | Content | Status |
@@ -206,4 +249,9 @@ Features ported from [NeuronFS](https://github.com/rhino-acoustic/NeuronFS) (Go,
 | v0.1.0 | Core CLI | DONE |
 | v0.2.0 | REST API + Inbox | DONE |
 | v0.3.x | Claude Code Integration | DONE |
-| v0.5.0 | Immune System + Feedback Loop (Phase 4+5 combined) | DONE (current) |
+| v0.5.0 | Immune System + Feedback Loop (Phase 4+5 combined) | DONE |
+| v0.6.0-v0.8.x | Tool failures, multi-brain, Voyager foundations | DONE |
+| v0.9.0 | Digest quality (Korean false positive reduction) | DONE |
+| v0.10.0 | Agent-as-Evaluator (auto-fire candidates) | DONE |
+| v0.11.0 | Agent-driven learning (hebbian learn, any language) | DONE |
+| v0.11.1 | Self-evolution without external API | DONE (current) |

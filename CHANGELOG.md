@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.11.1 (2026-04-03)
+
+Self-evolution without external API — the agent IS the evaluator.
+
+### Added
+- **Self-Evolution in emit** — CLAUDE.md now includes `Self-Evolution` section instructing the agent to review Active Rules and fire/rollback based on its own judgment. No Gemini API needed.
+- **Recent Memory in emit** — last 5 episodes are shown in CLAUDE.md so the agent has cross-session context for evolution decisions.
+- **Automatic decay** — `hebbian decay` added to SessionStart hook. Stale neurons (30d inactive) are cleaned up every session start.
+
+### Changed
+- `emitBootstrap` now imports and displays recent episodes from hippocampus
+- SessionStart hook chain: `decay → emit → session start`
+
+## 0.11.0 (2026-04-03)
+
+Agent-driven learning — any language, any agent framework.
+
+### Added
+- **`hebbian learn`** — new CLI command for real-time correction registration. The running agent (Claude/Cursor/Copilot/any) detects corrections during conversation and calls `hebbian learn --prefix NO --keywords "k1,k2" "text"`. Works in any language because the agent IS the LLM.
+- **Self-Learning in emit** — CLAUDE.md now includes `Self-Learning` section instructing the agent to call `hebbian learn` when it detects user corrections. Emitted to all targets (claude/cursor/gemini/copilot/generic).
+- **Korean pattern expansion** — negation: 10 patterns (was 3), affirmation: 4 (was 1), must: 4 (was 1), warn: 3 (was 1). False positives caught by Codex review and fixed.
+- **Doctor hook detection fix** — now checks both `~/.claude/settings.json` (global) and `.claude/settings.local.json` (local), traverses correct hook nesting level.
+- `learn()`, `LearnOptions`, `LearnResult` exported from public API
+- 25 new tests (364 total): Korean patterns, false-positive regression, learn command, Cyrillic keywords
+
+### Changed
+- Confidence filter generalized from Korean-specific to non-Latin (works for any CJK/Cyrillic/Arabic script)
+- `learn.ts` keyword sanitizer preserves all Unicode scripts (Cyrillic, Arabic, Devanagari, etc.)
+- `evolve` is now optional — agent-driven learning replaces it for most use cases
+
+### Removed
+- `patterns.json` system (loadCustomPatterns, CustomPatterns) — redundant with agent-driven learning
+
 ## 0.10.0 (2026-04-02)
 
 Agent-as-Evaluator — self-learning without API keys.
