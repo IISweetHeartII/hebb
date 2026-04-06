@@ -19,6 +19,7 @@ import { growNeuron } from './grow';
 import { fireNeuron } from './fire';
 import { readEpisodes } from './episode';
 import type { GrowResult } from './grow';
+import type { NeuronMeta } from './types';
 
 export const CANDIDATE_THRESHOLD = 3;
 export const CANDIDATE_DECAY_DAYS = 14;
@@ -52,9 +53,9 @@ export function fromCandidatePath(candidatePath: string): string {
  * Grow a candidate neuron. If the counter reaches threshold, promote to region.
  * Use instead of growNeuron() for evolve/inbox/digest flows.
  */
-export function growCandidate(brainRoot: string, neuronPath: string): GrowResult & { promoted: boolean } {
+export function growCandidate(brainRoot: string, neuronPath: string, meta?: NeuronMeta): GrowResult & { promoted: boolean } {
 	const candidatePath = toCandidatePath(neuronPath);
-	const result = growNeuron(brainRoot, candidatePath);
+	const result = growNeuron(brainRoot, candidatePath, meta);
 
 	if (result.counter >= CANDIDATE_THRESHOLD) {
 		const ok = moveCandidate(brainRoot, candidatePath, neuronPath);

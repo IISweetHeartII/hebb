@@ -9,7 +9,7 @@
 import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { REGIONS, REGION_PRIORITY, MAX_DEPTH, SKILLS_DIR } from './constants';
-import type { Neuron, Region, Brain } from './types';
+import type { Neuron, NeuronMeta, Region, Brain } from './types';
 
 /**
  * Scan a brain directory and return all regions with their neurons.
@@ -74,6 +74,7 @@ function walkRegion(dir: string, regionRoot: string, depth: number): Neuron[] {
 	let isDormant = false;
 	let modTime = new Date(0);
 	let hasTraceFile = false;
+	let counterFileName = '';
 
 	for (const entry of entries) {
 		if (entry.name.startsWith('_')) continue;
@@ -86,6 +87,7 @@ function walkRegion(dir: string, regionRoot: string, depth: number): Neuron[] {
 				const n = parseInt(name, 10);
 				if (!isNaN(n) && n > counter) {
 					counter = n;
+					counterFileName = name;
 					hasTraceFile = true;
 					try {
 						const st = statSync(join(dir, name));
@@ -140,6 +142,15 @@ function walkRegion(dir: string, regionRoot: string, depth: number): Neuron[] {
 		const intensity = counter - contra + dopamine;
 		const polarity = total > 0 ? intensity / total : 0;
 
+		// Read metadata from the counter file (if it has content)
+		let meta: NeuronMeta | null = null;
+		if (counterFileName) {
+			try {
+				const content = readFileSync(join(dir, counterFileName), 'utf8').trim();
+				if (content) meta = JSON.parse(content) as NeuronMeta;
+			} catch { /* empty or malformed = null */ }
+		}
+
 		neurons.push({
 			name: folderName,
 			path: relPath,
@@ -154,6 +165,7 @@ function walkRegion(dir: string, regionRoot: string, depth: number): Neuron[] {
 			isDormant,
 			depth,
 			modTime,
+			meta,
 		});
 	}
 

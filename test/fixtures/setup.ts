@@ -7,6 +7,7 @@ import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import type { NeuronMeta } from '../../src/types';
 
 /**
  * Create a fully populated test brain in a temp directory.
@@ -55,10 +56,11 @@ export function setupTestBrain(): { root: string } {
 /**
  * Create a single neuron (folder + counter file).
  */
-export function neuron(root: string, path: string, counter: number): void {
+export function neuron(root: string, path: string, counter: number, meta?: NeuronMeta): void {
 	const dir = join(root, path);
 	mkdirSync(dir, { recursive: true });
-	writeFileSync(join(dir, `${counter}.neuron`), '', 'utf8');
+	const content = meta ? JSON.stringify(meta) : '';
+	writeFileSync(join(dir, `${counter}.neuron`), content, 'utf8');
 }
 
 /**

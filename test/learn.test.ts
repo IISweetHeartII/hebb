@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setupTestBrain } from './fixtures/setup';
@@ -124,6 +124,27 @@ describe('learn', () => {
 				text: 'Can you help me write a function?',
 			});
 			expect(result).toBeNull();
+		});
+	});
+
+	describe('metadata', () => {
+		it('writes metadata to candidate .neuron file', () => {
+			const { root } = setupTestBrain();
+			const result = learn(root, {
+				text: 'stop using console.log for debugging',
+				prefix: 'NO',
+				keywords: ['console', 'log', 'debug'],
+			});
+			expect(result).not.toBeNull();
+
+			const neuronFile = join(root, 'cortex', '_candidates', 'NO_console_log_debug', '1.neuron');
+			expect(existsSync(neuronFile)).toBe(true);
+			const content = readFileSync(neuronFile, 'utf8');
+			const meta = JSON.parse(content);
+			expect(meta.keywords).toEqual(['console', 'log', 'debug']);
+			expect(meta.source).toBe('agent');
+			expect(meta.description).toBe('stop using console.log for debugging');
+			expect(meta.created).toBeDefined();
 		});
 	});
 

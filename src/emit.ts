@@ -263,7 +263,8 @@ export function emitRegionRules(region: Region): string {
 			if (n.hasBomb) signals.push('\u{1F4A3}');
 			if (n.hasMemory) signals.push('\u{1F4BE}');
 			const signalStr = signals.length > 0 ? ` ${signals.join(' ')}` : '';
-			lines.push(`${indent}- ${prefix}${pathToSentence(n.path)} (${n.counter})${signalStr}`);
+			const desc = n.meta?.description ? ` — ${n.meta.description.slice(0, 60)}` : '';
+			lines.push(`${indent}- ${prefix}${pathToSentence(n.path)} (${n.counter})${signalStr}${desc}`);
 		}
 		lines.push('');
 	}

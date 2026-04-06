@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.12.0 (2026-04-06)
+
+Neuron metadata, auto-evolution trigger, and codebase quality fixes.
+
+### Added
+- **Neuron metadata** — `.neuron` files now store JSON metadata (keywords, source, created, description). Scanner reads metadata; emit displays descriptions in Tier 3 rules. Backward compatible: empty files read as `meta: null`.
+- **Auto-evolution trigger** — `checkAutoEvolve()` runs after every fire/learn. When cumulative count hits a configurable threshold, automatically triggers `evolve`. Configure with `hebbian config auto-evolve-threshold N`.
+- **`hebbian config` command** — view and set brain configuration. Stored in `brain/.config.json`.
+- **Doctor config validation** — `hebbian doctor` now checks `.config.json` and warns if auto-evolve is enabled without `GEMINI_API_KEY`.
+- `NeuronMeta`, `BrainConfig` types exported from public API
+- 18 new tests (382+ total): config read/write, fire counter, metadata lifecycle, emit description display
+
+### Fixed
+- **Missing metadata in growCandidate calls** — digest.ts, evolve.ts, inbox.ts now pass metadata to `growCandidate()` instead of losing correction context.
+- **Duplicate PROTECTED_REGIONS** — evolve.ts now imports `PROTECTED_REGIONS_CONTRA` from constants.ts instead of maintaining a local copy.
+- **Unnecessary `await` on sync functions** — removed 7 `await` calls on synchronous functions in cli.ts (fireNeuron, growNeuron, rollbackNeuron, signalNeuron, initBrain, emitToTarget, runDecay).
+- **Duplicate exports in index.ts** — removed redundant re-export of `resolveBrainRoot`, `resolveAgentBrain`, `resolveSharedBrain` (already covered by `export * from './constants'`).
+
 ## 0.11.1 (2026-04-03)
 
 Self-evolution without external API — the agent IS the evaluator.

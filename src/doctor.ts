@@ -170,6 +170,24 @@ export async function runDoctor(brainRoot: string): Promise<DoctorResult> {
 		warn('Could not scan candidates');
 	}
 
+	// ── Configuration ──────────────────────────────────────────────────
+	console.log('\nconfiguration');
+	try {
+		const { readConfig } = await import('./config');
+		const config = readConfig(brainRoot);
+		if (config.autoEvolveThreshold > 0) {
+			if (!process.env.GEMINI_API_KEY) {
+				warn(`Auto-evolve enabled (threshold: ${config.autoEvolveThreshold}) but GEMINI_API_KEY not set`, 'export GEMINI_API_KEY=... or set threshold to 0');
+			} else {
+				ok(`Auto-evolve enabled (threshold: ${config.autoEvolveThreshold})`);
+			}
+		} else {
+			ok('Auto-evolve disabled (threshold: 0)');
+		}
+	} catch {
+		warn('Could not read .config.json');
+	}
+
 	// ── Summary ────────────────────────────────────────────────────────
 	console.log(`\n${'─'.repeat(40)}`);
 	console.log(`  passed: ${passed}  warnings: ${warnings}  failed: ${failed}`);

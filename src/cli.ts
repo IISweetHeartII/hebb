@@ -61,6 +61,7 @@ COMMANDS:
   session start|end               Capture/detect session outcomes
   sessions                        Show session outcome history
   doctor                          Self-diagnostic (hooks, brain, versions)
+  config [key] [value]            View/set brain config
   diag                            Print brain diagnostics
   stats                           Print brain statistics
 
@@ -95,6 +96,10 @@ function readStdin(): Promise<string> {
 			resolve(Buffer.concat(chunks).toString('utf8'));
 		}, 1000);
 	});
+}
+
+function camelize(s: string): string {
+	return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -146,7 +151,7 @@ async function main(argv: string[]): Promise<void> {
 				process.exit(1);
 			}
 			const { initBrain } = await import('./init');
-			await initBrain(resolve(target));
+			initBrain(resolve(target));
 			break;
 		}
 		case 'emit': {
@@ -156,7 +161,7 @@ async function main(argv: string[]): Promise<void> {
 				process.exit(1);
 			}
 			const { emitToTarget } = await import('./emit');
-			await emitToTarget(brainRoot, target);
+			emitToTarget(brainRoot, target);
 			// Non-blocking update check — show banner if upgrade available
 			const { checkForUpdates, formatUpdateBanner } = await import('./update-check');
 			checkForUpdates(VERSION).then((status) => {
@@ -172,7 +177,7 @@ async function main(argv: string[]): Promise<void> {
 				process.exit(1);
 			}
 			const { fireNeuron } = await import('./fire');
-			await fireNeuron(brainRoot, neuronPath);
+			fireNeuron(brainRoot, neuronPath);
 			break;
 		}
 		case 'grow': {
@@ -182,7 +187,7 @@ async function main(argv: string[]): Promise<void> {
 				process.exit(1);
 			}
 			const { growNeuron } = await import('./grow');
-			await growNeuron(brainRoot, neuronPath);
+			growNeuron(brainRoot, neuronPath);
 			break;
 		}
 		case 'rollback': {
@@ -192,7 +197,7 @@ async function main(argv: string[]): Promise<void> {
 				process.exit(1);
 			}
 			const { rollbackNeuron } = await import('./rollback');
-			await rollbackNeuron(brainRoot, neuronPath);
+			rollbackNeuron(brainRoot, neuronPath);
 			break;
 		}
 		case 'signal': {
@@ -203,13 +208,13 @@ async function main(argv: string[]): Promise<void> {
 				process.exit(1);
 			}
 			const { signalNeuron } = await import('./signal');
-			await signalNeuron(brainRoot, neuronPath, signalType as SignalType);
+			signalNeuron(brainRoot, neuronPath, signalType as SignalType);
 			break;
 		}
 		case 'decay': {
 			const days = values.days ? parseInt(values.days as string, 10) : 30;
 			const { runDecay } = await import('./decay');
-			await runDecay(brainRoot, days);
+			runDecay(brainRoot, days);
 			break;
 		}
 		case 'dedup': {
@@ -417,6 +422,28 @@ async function main(argv: string[]): Promise<void> {
 				default:
 					console.error('Usage: hebbian feedback <scan>');
 					process.exit(1);
+			}
+			break;
+		}
+		case 'config': {
+			const { readConfig, writeConfig } = await import('./config');
+			const key = positionals[1];
+			const val = positionals[2];
+			if (!key) {
+				const config = readConfig(brainRoot);
+				console.log(JSON.stringify(config, null, 2));
+			} else if (!val) {
+				const config = readConfig(brainRoot);
+				const k = key.replace(/-/g, '_') as string;
+				console.log(`${key}: ${JSON.stringify((config as unknown as Record<string, unknown>)[camelize(k)])}`);
+			} else {
+				const k = camelize(key.replace(/-/g, '_'));
+				let parsed: unknown = val;
+				if (val === 'true') parsed = true;
+				else if (val === 'false') parsed = false;
+				else if (/^\d+$/.test(val)) parsed = parseInt(val, 10);
+				writeConfig(brainRoot, { [k]: parsed } as Record<string, unknown>);
+				console.log(`✅ ${key} = ${val}`);
 			}
 			break;
 		}

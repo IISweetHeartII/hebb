@@ -146,6 +146,8 @@ bomb.neuron in any region → cascade halt.
 | `bomb.neuron` | Circuit breaker | Pain response |
 | `memoryN.neuron` | Episode recording | Long-term memory |
 | `*.dormant` | Inactive marker | Sleep pruning |
+| `.config.json` | Brain configuration | Settings |
+| `.fire_count` | Fire counter | Auto-evolve trigger |
 
 ---
 
@@ -168,6 +170,30 @@ hebbian learn "don't use console.log" --prefix NO --keywords "console,log,debug"
 hebbian learn "console.log 쓰지마" --prefix NO --keywords "console,log" --brain ./brain
 hebbian learn "не используй console.log" --prefix NO --keywords "console,log" --brain ./brain
 ```
+
+### Neuron Metadata (v0.12.0+)
+
+`.neuron` files store JSON metadata alongside the counter:
+
+```json
+{"keywords":["console","log"],"source":"agent","created":"2026-04-06T00:00:00Z","description":"Don't use console.log for debugging"}
+```
+
+- `keywords` — search terms for dedup/consolidation
+- `source` — who created it (`agent`, `regex`, `evolve`, `manual`)
+- `description` — human-readable rule text, shown in Tier 3 emit output
+- Backward compatible: empty files (pre-0.12) are read as `meta: null`
+
+### Auto-Evolution (v0.12.0+)
+
+Configure automatic evolution after N fires/learns:
+
+```bash
+hebbian config auto-evolve-threshold 25   # trigger evolve every 25 fires
+hebbian config auto-evolve-threshold 0    # disable (default)
+```
+
+Requires `GEMINI_API_KEY`. If unset, the trigger silently skips. Run `hebbian doctor` to validate.
 
 ### Self-Evolution (v0.11.1+)
 
@@ -295,6 +321,10 @@ hebbian digest [--transcript <path>]    # Transcript correction extraction (fall
 # Session tracking
 hebbian session start|end               # Capture/detect session outcomes
 hebbian sessions                        # Show session outcome history
+
+# Configuration
+hebbian config                          # Show all config
+hebbian config auto-evolve-threshold 25 # Set auto-evolve threshold
 
 # Evolution (optional power feature — learning works without this)
 GEMINI_API_KEY=... hebbian evolve [--dry-run]

@@ -16,7 +16,8 @@ import { readEpisodes, logEpisode } from './episode';
 import type { Episode } from './episode';
 import { scanBrain } from './scanner';
 import type { Brain } from './types';
-import { REGIONS, REGION_PRIORITY, SKILLS_DIR } from './constants';
+import { REGIONS, REGION_PRIORITY, SKILLS_DIR, PROTECTED_REGIONS_CONTRA } from './constants';
+import type { NeuronMeta } from './types';
 import { fireNeuron } from './fire';
 import { growCandidate } from './candidates';
 import { growNeuron } from './grow';
@@ -43,7 +44,7 @@ export interface EvolveResult {
 }
 
 const MAX_ACTIONS = 10;
-const PROTECTED_REGIONS = ['brainstem', 'limbic', 'sensors'];
+const PROTECTED_REGIONS = PROTECTED_REGIONS_CONTRA;
 const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
 const API_TIMEOUT = 30_000;
 const RETRY_DELAY = 5_000;
@@ -386,13 +387,19 @@ export function executeActions(brainRoot: string, actions: EvolveAction[]): numb
 				case 'fire':
 					fireNeuron(brainRoot, action.path);
 					break;
-				case 'grow':
+				case 'grow': {
+					const meta: NeuronMeta = {
+						source: 'evolve',
+						created: new Date().toISOString(),
+						description: action.reason.slice(0, 200),
+					};
 					// Skills skip candidate staging — directly created by evolve
 					if (action.path.startsWith(SKILLS_DIR + '/')) {
-						growNeuron(brainRoot, action.path);
+						growNeuron(brainRoot, action.path, meta);
 					} else {
-						growCandidate(brainRoot, action.path);
+						growCandidate(brainRoot, action.path, meta);
 					}
+				}
 					break;
 				case 'signal':
 					signalNeuron(brainRoot, action.path, (action.signal || 'dopamine') as SignalType);

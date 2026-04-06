@@ -12,6 +12,7 @@ import { join, relative } from 'node:path';
 import { REGIONS, JACCARD_THRESHOLD, SKILLS_DIR } from './constants';
 import { tokenize, jaccardSimilarity } from './similarity';
 import { fireNeuron } from './fire';
+import type { NeuronMeta } from './types';
 
 export interface GrowResult {
 	action: 'grew' | 'fired';
@@ -23,7 +24,7 @@ export interface GrowResult {
  * Grow a new neuron at the given path.
  * If a similar neuron already exists in the same region, fires it instead.
  */
-export function growNeuron(brainRoot: string, neuronPath: string): GrowResult {
+export function growNeuron(brainRoot: string, neuronPath: string, meta?: NeuronMeta): GrowResult {
 	const fullPath = join(brainRoot, neuronPath);
 
 	// If neuron already exists, just fire it
@@ -63,7 +64,8 @@ export function growNeuron(brainRoot: string, neuronPath: string): GrowResult {
 
 	// No match — create new neuron
 	mkdirSync(fullPath, { recursive: true });
-	writeFileSync(join(fullPath, '1.neuron'), '', 'utf8');
+	const content = meta ? JSON.stringify(meta) : '';
+	writeFileSync(join(fullPath, '1.neuron'), content, 'utf8');
 	console.log(`\u{1F331} grew: ${neuronPath} (1)`);
 	return { action: 'grew', path: neuronPath, counter: 1 };
 }

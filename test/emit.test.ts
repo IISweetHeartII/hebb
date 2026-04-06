@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { setupTestBrain, plantBomb } from './fixtures/setup';
+import { setupTestBrain, plantBomb, neuron } from './fixtures/setup';
 import { scanBrain } from '../src/scanner';
 import { runSubsumption } from '../src/subsumption';
 import { emitBootstrap, emitIndex, emitRegionRules, emitToTarget } from '../src/emit';
@@ -127,6 +127,28 @@ describe('emitRegionRules (Tier 3)', () => {
 
 		expect(output).toContain('Connections');
 		expect(output).toContain('limbic');
+	});
+
+	it('shows metadata description when present', () => {
+		const { root } = setupTestBrain();
+		neuron(root, 'cortex/meta_test', 5, { description: 'do not use console.log for debugging' });
+		const brain = scanBrain(root);
+		const cortex = brain.regions.find((r: any) => r.name === 'cortex');
+		const output = emitRegionRules(cortex);
+
+		expect(output).toContain('do not use console.log for debugging');
+	});
+
+	it('truncates long descriptions to 60 chars', () => {
+		const { root } = setupTestBrain();
+		const longDesc = 'A'.repeat(100);
+		neuron(root, 'cortex/long_desc_test', 5, { description: longDesc });
+		const brain = scanBrain(root);
+		const cortex = brain.regions.find((r: any) => r.name === 'cortex');
+		const output = emitRegionRules(cortex);
+
+		expect(output).toContain('A'.repeat(60));
+		expect(output).not.toContain('A'.repeat(61));
 	});
 });
 

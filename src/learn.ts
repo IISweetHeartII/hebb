@@ -13,6 +13,8 @@
 import { growCandidate } from './candidates';
 import { logEpisode } from './episode';
 import { extractCorrections as extractCorrectionsSync } from './digest';
+import { checkAutoEvolve } from './config';
+import type { NeuronMeta } from './types';
 
 const VALID_PREFIXES = new Set(['NO', 'DO', 'MUST', 'WARN']);
 
@@ -62,8 +64,15 @@ export function learn(brainRoot: string, opts: LearnOptions): LearnResult | null
 	const pathSegment = `${prefix}_${keywords.slice(0, 3).join('_')}`;
 	const path = `cortex/${pathSegment}`;
 
-	growCandidate(brainRoot, path);
+	const meta: NeuronMeta = {
+		keywords,
+		source,
+		created: new Date().toISOString(),
+		description: opts.text.slice(0, 200),
+	};
+	growCandidate(brainRoot, path, meta);
 	logEpisode(brainRoot, 'learn', path, opts.text);
+	checkAutoEvolve(brainRoot);
 
 	return { path, prefix, keywords, source };
 }

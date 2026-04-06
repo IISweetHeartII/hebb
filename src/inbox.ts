@@ -13,6 +13,7 @@ import { growCandidate } from './candidates';
 import { fireNeuron } from './fire';
 import { signalNeuron } from './signal';
 import { logEpisode } from './episode';
+import type { NeuronMeta } from './types';
 
 const INBOX_DIR = '_inbox';
 const CORRECTIONS_FILE = 'corrections.jsonl';
@@ -124,7 +125,12 @@ function applyCorrection(brainRoot: string, correction: Correction): void {
 		}
 	} else {
 		// Neuron doesn't exist — grow via candidate staging
-		const candResult = growCandidate(brainRoot, neuronPath);
+		const meta: NeuronMeta = {
+			source: 'manual',
+			created: new Date().toISOString(),
+			description: correction.text.slice(0, 200),
+		};
+		const candResult = growCandidate(brainRoot, neuronPath, meta);
 		// Only fire additional times if already promoted to permanent
 		if (candResult.promoted) {
 			for (let i = 1; i < counterAdd; i++) {

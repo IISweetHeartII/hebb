@@ -1,5 +1,12 @@
 // hebbian — Core Type Definitions
 
+export interface NeuronMeta {
+  keywords?: string[];
+  source?: string;
+  created?: string;
+  description?: string;
+}
+
 export interface Neuron {
   name: string;
   path: string;
@@ -14,6 +21,7 @@ export interface Neuron {
   isDormant: boolean;
   depth: number;
   modTime: Date;
+  meta: NeuronMeta | null;
 }
 
 export interface Region {

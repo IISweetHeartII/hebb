@@ -2,6 +2,8 @@
 
 export * from './types';
 export * from './constants';
+export { readConfig, writeConfig, readFireCount, incrementFireCount, resetFireCount, checkAutoEvolve } from './config';
+export type { BrainConfig } from './config';
 export { scanBrain, scanSkills } from './scanner';
 export { runSubsumption } from './subsumption';
 export { tokenize, stem, jaccardSimilarity } from './similarity';
@@ -32,7 +34,6 @@ export { installHooks, uninstallHooks, checkHooks } from './hooks';
 export type { HookStatus } from './hooks';
 export { digestTranscript, extractCorrections, readHookInput, parseToolResults, detectToolFailure, detectRetryPatterns } from './digest';
 export type { DigestResult, ExtractedCorrection, ToolFailure } from './digest';
-export { resolveBrainRoot, resolveAgentBrain, resolveSharedBrain } from './constants';
 
 // Agent-Driven Learning
 export { learn } from './learn';

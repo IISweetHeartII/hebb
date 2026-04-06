@@ -17,6 +17,7 @@ import { MAX_CORRECTIONS_PER_SESSION, MIN_CORRECTION_LENGTH, DIGEST_LOG_DIR } fr
 import { growCandidate, listCandidates, CANDIDATE_THRESHOLD } from './candidates';
 import { fireNeuron } from './fire';
 import { logEpisode } from './episode';
+import type { NeuronMeta } from './types';
 // tokenize() not used here — digest uses its own unstemmed split for readable names.
 // tokenize() with stemming is for Jaccard similarity in grow.ts.
 
@@ -203,7 +204,13 @@ export function digestTranscript(brainRoot: string, transcriptPath: string, sess
 
 	for (const correction of corrections) {
 		try {
-			growCandidate(brainRoot, correction.path);
+			const meta: NeuronMeta = {
+				keywords: correction.keywords,
+				source: 'regex',
+				created: new Date().toISOString(),
+				description: correction.text.slice(0, 200),
+			};
+			growCandidate(brainRoot, correction.path, meta);
 			logEpisode(brainRoot, 'digest', correction.path, correction.text);
 			auditEntries.push({ correction, applied: true });
 			applied++;

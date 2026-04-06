@@ -5,19 +5,23 @@
 
 import { readdirSync, renameSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import type { NeuronMeta } from './types';
+import { checkAutoEvolve } from './config';
 
 /**
  * Increment a neuron's counter by 1.
  * If the neuron doesn't exist, auto-grows it with counter=1.
  */
-export function fireNeuron(brainRoot: string, neuronPath: string): number {
+export function fireNeuron(brainRoot: string, neuronPath: string, meta?: NeuronMeta): number {
 	const fullPath = join(brainRoot, neuronPath);
 
 	// Auto-grow if neuron doesn't exist
 	if (!existsSync(fullPath)) {
 		mkdirSync(fullPath, { recursive: true });
-		writeFileSync(join(fullPath, '1.neuron'), '', 'utf8');
+		const content = meta ? JSON.stringify(meta) : '';
+		writeFileSync(join(fullPath, '1.neuron'), content, 'utf8');
 		console.log(`\u{1F331} grew + fired: ${neuronPath} (1)`);
+		checkAutoEvolve(brainRoot);
 		return 1;
 	}
 
@@ -33,6 +37,7 @@ export function fireNeuron(brainRoot: string, neuronPath: string): number {
 	}
 
 	console.log(`\u{1F525} fired: ${neuronPath} (${current} → ${newCounter})`);
+	checkAutoEvolve(brainRoot);
 	return newCounter;
 }
 
